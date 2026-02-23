@@ -8,5 +8,5 @@
 
 | Topic | Title | Year | Authors | Paper | Code | Summary |
 | :--- | :--- | :---: | :--- | :---: | :---: | :--- |
-| Topic #1 | Paper Title | Publishing Year | Author #1 et al. | [arXiv/DOI]() | [GitHub]() | Short summary to be inserted in the Related Work section |
-|  | TODO | TODO | TODO | TODO | TODO | TODO |
+| Baseline | Meta-Learning the Inductive Bias of Simple Neural Circuits | 2023 | Dorrell et al. | [arXiv/DOI](https://arxiv.org/pdf/2211.13544) | [GitHub](https://github.com/WilburDoz/Meta_Learning_Inductive_Bias) | Baseline paper: meta-learning inductive bias of target model by generate label for fixed dataset |
+| Inductive bias | Inductive Policy: The Pragmatics of Bias Selection | 1995 | Provost, Buchanan | TODO | TODO | TODO |
