@@ -10,3 +10,5 @@
 | :--- | :--- | :---: | :--- | :---: | :---: | :--- |
 | Baseline | Meta-Learning the Inductive Bias of Simple Neural Circuits | 2023 | Dorrell et al. | [arXiv/DOI](https://arxiv.org/pdf/2211.13544) | [GitHub](https://github.com/WilburDoz/Meta_Learning_Inductive_Bias) | Baseline paper: meta-learning inductive bias of target model by generate label for fixed dataset |
 | Inductive bias | Inductive Policy: The Pragmatics of Bias Selection | 1995 | Provost, Buchanan | [Springer Link](https://link.springer.com/article/10.1007/BF00993474) |  | Foundational paper about inductive bias selection policy |
+| Inductive bias | Multitask Learning | 1997 | Caruana | [Springer Link](https://link.springer.com/article/10.1023/A:1007379606734) |  | Classical paper about multitask learning and its application |
+| Inductive bias | Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks | 2017 | Dorrell et al. | [arXiv/DOI](https://arxiv.org/pdf/1703.03400) | [Regression and supervised experiments](https://github.com/cbfinn/maml), [RL experiments](https://github.com/cbfinn/maml_rl) |  |
