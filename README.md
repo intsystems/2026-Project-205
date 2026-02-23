@@ -1,4 +1,4 @@
-# Inductive bias meta-learning with generative models
+# Inductive Bias Meta-Learning with Generative Models
 
 <!-- Change `kisnikser/m1p-template` to `intsystems/your-repository`-->
 [![License](https://badgen.net/github/license/kisnikser/m1p-template?color=green)](https://github.com/kisnikser/m1p-template/blob/main/LICENSE)
