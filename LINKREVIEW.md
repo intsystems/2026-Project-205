@@ -8,7 +8,7 @@
 
 | Topic | Title | Year | Authors | Paper | Code | Summary |
 | :--- | :--- | :---: | :--- | :---: | :---: | :--- |
-| Baseline | Meta-Learning the Inductive Bias of Simple Neural Circuits | 2023 | Dorrell et al. | [arXiv](https://arxiv.org/pdf/2211.13544) | [GitHub](https://github.com/WilburDoz/Meta_Learning_Inductive_Bias) | Baseline paper: meta-learning inductive bias of target model by generate label for fixed dataset \ For our work: base algorithm + code|
+| Baseline | Meta-Learning the Inductive Bias of Simple Neural Circuits | 2023 | Dorrell et al. | [arXiv](https://arxiv.org/pdf/2211.13544) | [GitHub](https://github.com/WilburDoz/Meta_Learning_Inductive_Bias) | Baseline paper: meta-learning inductive bias of target model by generate label for fixed dataset <br> For our work: base algorithm + code|
 | Inductive bias | Inductive Policy: The Pragmatics of Bias Selection | 1995 | Provost, Buchanan | [Springer Link](https://link.springer.com/article/10.1007/BF00993474) |  | Foundational paper about inductive bias selection policy |
 | | Multitask Learning | 1997 | Caruana | [Springer Link](https://link.springer.com/article/10.1023/A:1007379606734) |  | Classical paper about multitask learning and its application |
 | | Learning Inductive Biases with Simple Neural Networks | 2000 | Baxter | [arXiv](https://arxiv.org/abs/1106.0245) | | Formal theoretical framework for automatically learning inductive bias by embedding a learner within an environment of related tasks|
