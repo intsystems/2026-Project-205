@@ -19,6 +19,7 @@
 | | The No Free Lunch Theorem, Kolmogorov Complexity, and the Role of Inductive Biases in Machine Learning | 2024 | Goldblum et al. | [arXiv](https://arxiv.org/pdf/2304.05366) | | |
 |  | Towards Understanding Inductive Bias in Transformers: A View From Infinity | 2024 | Lavie et al. | [arXiv](https://arxiv.org/pdf/2402.05173) | | Research on inductive bias in transformers |
 | | Generalization through variance: how noise shapes inductive biases in diffusion models | 2025 | Vastola | [arXiv](https://arxiv.org/pdf/2504.12532) | | Theoretical research on inductive bias in diffusion models |
+|  | Meta-learning inductive biases of learning systems with Gaussian processes | 2022 | Li et al. | [OpenReview](https://openreview.net/forum?id=YPeusrnp28q) | | Meta-learning inductuve bias in neural networks (capture the inductive biases in a learning system by meta-learning Gaussian process kernel hyperparameters from its predictions) |
 | Meta-learning | Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks | 2017 | Finn et al. | [arXiv](https://arxiv.org/pdf/1703.03400) | [Regression and supervised experiments](https://github.com/cbfinn/maml), [RL experiments](https://github.com/cbfinn/maml_rl) | Model-agnostic meta-learning algorithm designed to help deep neural networks adapt rapidly to new tasks with minimal data |
 |  | Meta-Learning in Neural Networks: A Survey | 2021 | Hospedales et al. | [IEEE](https://ieeexplore.ieee.org/abstract/document/9428530/) | | Survey of meta-learning <br> For our work: for understanding|
 
