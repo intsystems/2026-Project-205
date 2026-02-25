@@ -25,4 +25,4 @@
 |  | Geometric Deep Learning Grids, Groups, Graphs, Geodesics, and Gauges | 2021 | Bronstein et al. | [arXiv](https://arxiv.org/pdf/2104.13478) | | Geometrical approach to prior physical knowledge into neural architectures |
 | Meta-learning | Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks | 2017 | Finn et al. | [arXiv](https://arxiv.org/pdf/1703.03400) | [Regression and supervised experiments](https://github.com/cbfinn/maml), [RL experiments](https://github.com/cbfinn/maml_rl) | Model-agnostic meta-learning algorithm designed to help deep neural networks adapt rapidly to new tasks with minimal data |
 |  | Meta-Learning in Neural Networks: A Survey | 2021 | Hospedales et al. | [IEEE](https://ieeexplore.ieee.org/abstract/document/9428530/) | | Survey of meta-learning <br> For our work: for understanding|
-
+| Inductive bias + meta-learning | Teasing Apart Architecture and Initial Weights as Sources of Inductive Bias in Neural Networks | 2025 | Bencomo et al. | [url](https://escholarship.org/uc/item/7kh8q92h) | | Study of impact of architecture and initial weights on inductive bias (using meta-learning + CNN and RNN as examples)|
