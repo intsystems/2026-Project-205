@@ -75,41 +75,43 @@
 \maketitle
 
 \begin{abstract}
-    This paper investigates inductive bias in machine learning models. By inductive bias we mean the preference of a model for certain types of functions or data structures over others. To analyze the inductive bias of a fixed model, we consider a problem of finding data that this model can fit and generalize on particularly well. Previous work demonstrated that generating labels for a fixed dataset allows one to extract the inductive bias. Here, we extend this approach by proposing a method for generating full synthetic datasets. We train a generative model to produce datasets on which the target model achieves strong generalization performance. We test the proposed framework on CNN and RNN, and analyze obtained datasets for each model.
+    This paper investigates inductive bias in machine learning models. By inductive bias we mean the preference of a model for certain types of functions or data structures over others. To analyze the inductive bias of a fixed model, we consider a problem of finding data that this model can fit and generalize on particularly well. Previous work demonstrated that generating labels for a fixed dataset allows one to extract the inductive bias. Here, we extend this approach by proposing a method for generating full synthetic datasets. We train a generative model to produce datasets on which the target model achieves strong generalization performance. We test the proposed framework on CNNs and RNNs, and analyze obtained datasets for each model.
 \end{abstract}
 
 \textbf{Keywords:} inductive bias, meta-learning, generative models.
 
 \section{Introduction}\label{sec:intro}
 
-TODO
+Inductive bias plays a fundamental role in a model’s ability to generalize ~\cite{Mitchell2007TheNF}. Without additional assumptions, any hypothesis that fits a finite training dataset is considered equally likely by the model, which can lead to poor generalization. Thus, effective generalization requires a set of prior assumptions about the data, and these assumptions constitute the model’s inductive bias. Understanding and exploiting inductive bias can be a powerful tool for enhancing model performance.
+
+The term “inductive bias” does not have a single, strict definition. In this paper, by inductive bias we mean a model's preference for certain types of functions or data structures over others, expressed through better generalization performance. For example, convolutional neural networks (CNNs) are inductively biased towards data with local structure and translation invariance~\cite{726791, wang2024theoreticalanalysisinductivebiases, cohen2017inductivebiasdeepconvolutional}, while recurrent neural networks (RNNs) are inductively biased towards ordered data with sequential structure~\cite{lstm, ishii2023empiricalanalysisinductivebias,DUBININ2024106179}.
+
+A clear understanding of the correspondence between models (or their specific components) and inductive biases is useful for solving machine learning problems. However, this task is highly non-trivial: for most models with complex architecture, the problem of detecting inductive bias is analytically intractable. A recent result in this area is the meta-learning framework introduced by Dorrell et al.~\cite{dorrell2023metalearninginductivebiasessimple}, which identifies the inductive bias of differentiable supervised learning algorithms by generating labels for a fixed dataset. For all its strengths, this approach has certain limitations. First, it requires access to input data or its distribution. Second, its analysis of inductive bias is constrained by the fixed dataset and its structure. 
+
+Here, we propose to extend this approach by generating entire synthetic datasets. The meta-learning loop proceeds as follows: an outer model (meta-learner) generates a dataset, which is used to train and test an inner model (learner) whose inductive bias we aim to extract. After the learner is trained, the quality of its predictions on test data from this dataset is incorporated into the meta-learner's loss function. Thus, the meta-learner learns to generate datasets on which the target model shows the best generalization performance; these are datasets towards which it is inductively biased.
+
+The proposed approach requires no knowledge of the input data distribution, making it more flexible. We expect it to enable a more comprehensive analysis of inductive bias.
 
 \textbf{Contributions.} Our contributions can be summarized as follows:
 \begin{itemize}
-    \item We present...
-    \item We demonstrate the validity of our theoretical results through empirical studies...
-    \item We highlight the implications of our findings for...
+    \item We present a generative meta-learning framework to extract the inductive bias of a fixed target model.
+    \item We empirically evaluate our algorithm on CNNs and RNNs and compare the results with known inductive biases of these architectures.
+    \item We highlight the implications of our findings for understanding and leveraging inductive bias.
 \end{itemize}
+
 
 \textbf{Outline.} The rest of the paper is organized as follows...
 
-\section{Related Work}\label{sec:rw}
+\section{Problem statement}\label{sec:prostate}
+We study the problem of extracting and characterizing the inductive bias of learning models by finding the datasets that they generalize best. We now present a formal statement of the problem.
 
-\textbf{Topic \#1.}
-TODO
+Let us fix \(f_{\theta}  : \mathbf{X} \to \mathbf{y}\) -- our target model, where $\theta$ - its parameters. We aim to find data distribution function \(p^*\), which would be the solution to the following optimization problem:
+\[
+p^* = \arg\max_{p(\mathbf{X},\mathbf{y})} \mathrm{E}_{\mathfrak{D}_{\text{train}}, \mathfrak{D}_{\text{test}} \sim p(\mathbf{X},\mathbf{y})} \left[ \mathcal{L}\left( f_{\hat{\theta}}, \mathfrak{D}_{\text{test}} \right) \right] \quad \text{s.t.} \quad |\mathfrak{D}_{\text{train}} \cup \mathfrak{D}_{\text{test}}| = m
+\]
+where \(\hat{\theta} = \arg\min_{\theta}\sum_{(\mathbf{x}, y) \in \mathfrak{D}_{\text{train}}} \ell(f_{\theta}(\mathbf{x}), y) \).
 
-\textbf{Topic \#2.}
-TODO
-
-\section{Preliminaries}\label{sec:prelim}
-
-\subsection{General notation}
-
-In this section, we introduce the general notation used in the rest of the paper and the basic assumptions. 
-
-\subsection{Assumptions} 
-
-TODO
+Function \(\mathcal{L}\) measures a model's ability to generalize by calculating the accuracy on a test set and also contains regularization terms to avoid trivial solutions.
 
 \section{Method}\label{sec:method}
 
