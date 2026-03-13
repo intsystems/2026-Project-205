@@ -82,21 +82,23 @@
 
 \section{Introduction}\label{sec:intro}
 
-Inductive bias plays a fundamental role in a model’s ability to generalize ~\cite{Mitchell2007TheNF}. Without additional assumptions, any hypothesis that fits a finite training dataset is considered equally likely by the model, which can lead to poor generalization. Thus, effective generalization requires a set of prior assumptions about the data, and these assumptions constitute the model’s inductive bias. Understanding and exploiting inductive bias can be a powerful tool for enhancing model performance.
+Inductive bias plays a fundamental role in a model’s ability to generalize ~\cite{mitchell1980need}. Without additional assumptions, any hypothesis that fits a finite training dataset is considered equally likely by the model, which can lead to poor generalization. Thus, effective generalization requires a set of prior assumptions about the data, and these assumptions constitute the model’s inductive bias. Understanding and exploiting inductive bias can be a powerful tool for enhancing model performance.
 
-The term “inductive bias” does not have a single, strict definition. In this paper, by inductive bias we mean a model's preference for certain types of functions or data structures over others, expressed through better generalization performance. For example, convolutional neural networks (CNNs) are inductively biased towards data with local structure and translation invariance~\cite{726791, wang2024theoreticalanalysisinductivebiases, cohen2017inductivebiasdeepconvolutional}, while recurrent neural networks (RNNs) are inductively biased towards ordered data with sequential structure~\cite{lstm, ishii2023empiricalanalysisinductivebias,DUBININ2024106179}.
+The term “inductive bias” does not have a single, strict definition. For instance, inductive bias can mean underlying assumptions about the domain and task or specific implementation choices that constrain or order the space of hypotheses ~\cite{provost1995inductive}. In this paper, by inductive bias we mean a model's preference for certain types of functions or data structures over others, expressed through better generalization performance. For example, convolutional neural networks (CNNs) are inductively biased towards data with local structure and translation invariance~\cite{726791, wang2024theoreticalanalysisinductivebiases, cohen2017inductivebiasdeepconvolutional}, while recurrent neural networks (RNNs) are inductively biased towards ordered data with sequential structure~\cite{lstm, ishii2023empiricalanalysisinductivebias,DUBININ2024106179}.
 
-A clear understanding of the correspondence between models (or their specific components) and inductive biases is useful for solving machine learning problems. However, this task is highly non-trivial: for most models with complex architecture, the problem of detecting inductive bias is analytically intractable. A recent result in this area is the meta-learning framework introduced by Dorrell et al.~\cite{dorrell2023metalearninginductivebiasessimple}, which identifies the inductive bias of differentiable supervised learning algorithms by generating labels for a fixed dataset. For all its strengths, this approach has certain limitations. First, it requires access to input data or its distribution. Second, its analysis of inductive bias is constrained by the fixed dataset and its structure. 
+A clear understanding of the correspondence between models (or their specific components) and inductive biases is useful for solving machine learning problems. However, this task is highly non-trivial: for most models with complex architecture, the problem of detecting inductive bias is analytically intractable. Several approaches have been developed to extract and characterize the inductive bias of models. Boopathy et al.~\cite{boopathy2024exactcomputationinductivebias} proposed a method to quantify the amount of inductive bias of tasks or models as the amount of information required to specify well-generalizing models within a given hypothesis space. Si et al.~\cite{si2023measuringinductivebiasesincontext} investigated the inductive bias of in-context learning by constructing underspecified demonstrations. Li et al.~\cite{li2021meta} proposed a framework to capture the inductive biases in a learning system by meta-learning Gaussian process kernel hyperparameters from its predictions.
 
-Here, we propose to extend this approach by generating entire synthetic datasets. The meta-learning loop proceeds as follows: an outer generative model (meta-learner) produces a dataset, which is used to train and test an inner model (learner) whose inductive bias we aim to extract. After the learner is trained, the quality of its predictions on test data from this dataset is incorporated into the meta-learner's loss function. Thus, the meta-learner learns to generate datasets on which the target model shows the best generalization performance; these are datasets towards which it is inductively biased.
+One recent result in this area is the meta-learning framework introduced by Dorrell et al.~\cite{dorrell2023metalearninginductivebiasessimple}, which identifies the inductive bias of differentiable supervised learning algorithms by generating labels for a fixed dataset. For all its strengths, this approach has certain limitations. First, it requires access to input data or its distribution. Second, its analysis of inductive bias is constrained by the fixed dataset and its structure. 
+
+Here, we propose to extend this approach by generating entire synthetic datasets. The meta-learning loop proceeds as follows: an outer generative model, or meta-learner, produces a dataset, which is used to train and test an inner model, or learner, whose inductive bias we aim to extract. After the learner is trained, the quality of its predictions on test data from this dataset is incorporated into the meta-learner's loss function. Thus, the meta-learner learns to generate datasets on which the target model shows the best generalization performance; these are datasets towards which it is inductively biased.
 
 The proposed approach requires no knowledge of the input data distribution, making it more flexible. We expect it to enable a more comprehensive analysis of inductive bias.
 
 \textbf{Contributions.} Our contributions can be summarized as follows:
 \begin{itemize}
-    \item We present a generative meta-learning framework to extract the inductive bias of a fixed target model.
-    \item We empirically evaluate our algorithm on CNNs and RNNs and compare the results with known inductive biases of these architectures.
-    \item We highlight the implications of our findings for understanding and leveraging inductive bias.
+    \item We present a generative meta-learning framework for extracting the inductive bias of a target model. Unlike prior work that generates only labels for samples from a fixed distribution, our approach produces entire synthetic datasets via a meta-learned generative model.
+    \item We empirically evaluate our algorithm on CNNs and RNNs and compare the results with the known inductive biases of these architectures. For CNNs, we expect to detect a local structure in the generated datasets; for RNNs, we expect them to have a sequential structure.
+    \item We highlight the implications of our findings for understanding and leveraging inductive bias. Our method is general-purpose: it can be used to extract inductive bias of any differentiable supervised learning algorithm and, consequently, to improve the generalization performance of models in machine learning problems.
 \end{itemize}
 
 
@@ -105,13 +107,25 @@ The proposed approach requires no knowledge of the input data distribution, maki
 \section{Problem statement}\label{sec:prostate}
 We study the problem of extracting and characterizing the inductive bias of learning models by finding the datasets that they generalize best. We now present a formal statement of the problem.
 
-Let us fix \(f_{\theta}  : \mathbf{X} \to \mathbf{y}\) -- our target model, where $\theta \in \Theta$ - its parameters. We aim to find data distribution function \(p^*\), which would be the solution to the following optimization problem:
-\[
-p^* = \arg\min_{p(\mathbf{X},\mathbf{y})} \mathrm{E}_{\mathfrak{D}_{\text{train}}, \mathfrak{D}_{\text{test}} \sim p(\mathbf{X},\mathbf{y})} \left[ \mathcal{L}\left( f_{\hat{\theta}}, \mathfrak{D}_{\text{test}} \right) \right] \quad \text{s.t.} \quad |\mathfrak{D}_{\text{train}} \cup \mathfrak{D}_{\text{test}}| = m
-\]
-where \(\hat{\theta} = \arg\min_{\theta}\sum_{(\mathbf{x}, y) \in \mathfrak{D}_{\text{train}}} \ell(f_{\theta}(\mathbf{x}), y) \).
+Let \(\mathbb{X} \subset \mathbb{R}^n\) be the input space, \(\mathbb{Y} \subset \mathbb{R}^m\) be the output space and \(\mathbf{f}_{\boldsymbol{\theta}}  : \mathbb{X} \to \mathbb{Y}\) be the target model, where $\boldsymbol{\theta} \in \Theta \subset \mathbb{R}^k$ are its parameters. Let \(\ell(\mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y})\) be the loss function of the target model.
 
-Function \(\mathcal{L}\) measures a model's ability to generalize by calculating the prediction error on a test set and also contains regularization terms to avoid trivial solutions.
+Consider a parametric family of distributions \(p(\mathbf{x} | \mathbf{y}, \mathbf{w})\), where $\mathbf{w} \in \mathbb{W} \subset \mathbb{R}^l$ are the parameters of the distribution. For a fixed label \(\mathbf{y} \in \mathbb{Y}\), a sample \(\mathbf{x} \sim p(\mathbf{x} | \mathbf{y}, \mathbf{w})\) is produced by the generator $\mathbf{g}(\mathbf{w})$.
+
+We aim to find data distribution function \(p^*\), corresponding to parameters \(\mathbf{w}^*\), the solution to the following optimization problem:
+\[
+\mathbf{w}^* = \arg\min_{\mathbf{w} \in \mathbb{W}} \mathrm{E}_{\mathfrak{D}_{\text{train}}, \mathfrak{D}_{\text{test}} \sim p(\mathbf{x} | \mathbf{y}, \mathbf{w})} \left[ \mathcal{L}\left( \mathbf{f}_{\boldsymbol{\hat{\theta}}}, \mathfrak{D}_{\text{test}} \right) \right] \quad \text{s.t.} \quad |\mathfrak{D}_{\text{train}} \cup \mathfrak{D}_{\text{test}}| = d
+\]
+where 
+\[\boldsymbol{\hat{\theta}} = \arg\min_{\boldsymbol{\theta} \in \Theta}\sum_{(\mathbf{x}, \mathbf{y}) \in \mathfrak{D}_{\text{train}}} \ell(\mathbf{f}_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y}).\]
+Function \(\mathcal{L}\) measures a model's ability to generalize by calculating the prediction error on a test set and also contains regularization terms to avoid trivial solutions. For example, prediction error can be estimated as cross-entropy or mean squared error (MSE), defined respectively as:
+\[
+\mathcal{L}_{\text{CE}} = -\frac{1}{|\mathfrak{D}_{\text{test}}|} \sum_{(\mathbf{x}, \mathbf{y}) \in \mathfrak{D}_{\text{test}}} \sum_{i=1}^{m} y_i \log\big( [\mathbf{f}_{\boldsymbol{\hat{\theta}}}(\mathbf{x})]_i \big), \qquad
+\mathcal{L}_{\text{MSE}} = \frac{1}{|\mathfrak{D}_{\text{test}}|} \sum_{(\mathbf{x}, \mathbf{y}) \in\mathfrak{D}_{\text{test}}} \| \mathbf{y} - \mathbf{f}_{\boldsymbol{\hat{\theta}}}(\mathbf{x}) \|^2.
+\]
+The regularization term can be the entropy of the found distribution, defined as:
+\[
+\mathcal{R}_{\text{ent}}(\mathbf{w}) = - \mathrm{E}_{\mathbf{y}} \left[ \int_{\mathbb{X}} p(\mathbf{x} | \mathbf{y}, \mathbf{w}) \log p(\mathbf{x} | \mathbf{y}, \mathbf{w}) \, d\mathbf{x} \right].
+\]
 
 \section{Method}\label{sec:method}
 
