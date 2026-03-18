@@ -131,6 +131,16 @@ The regularization term can be the entropy of the found distribution, defined as
 
 \section{Experiments}\label{sec:exp}
 
+\subsection{Baseline experiment}
+
+First, we replicate the experiment by Dorell et al.~\cite{dorrell2023metalearninginductivebiasessimple} on extracting inductive bias via label generation. Their algorithm proceeds as follows: the meta-learner generates labels for a dataset, which is subsequently used to train the learner; the learner's generalization performance on these labels is then evaluated and incorporated into the meta-loss function. In this way, the meta-learner is trained to find functions that the learner can easily generalize.
+
+As the target model, we use linear regression, and as the meta-learner, a 4-layer MLP. The meta-loss function consists of three terms: the MSE of the linear regression on the test set, the Sinkhorn distance of the label distribution from a uniform distribution, and terms that account for previously obtained functions to ensure orthogonality with them.
+
+As a result of the experiment, we obtained three orthogonal linear functions, as expected.
+
+\subsection{Proposed Framework Evaluation}
+
 To empirically validate our algorithm, we conducted computational experiments to extract the inductive bias of CNNs and RNNs. Specifically, we verify that the generative model learns to create datasets on which the target model shows the best generalization performance, investigate the influence of different regularization terms on the generated data, and attempt to interpret the obtained results in light of the well-known inductive biases of these architectures.
 
 Data in our experiments is fully synthetic. For CNNs we generate datasets of images with a given number of classes and number of objects per class. As a generative model, we used a variational autoencoder (VAE) decoder. It transforms a vector from a latent space, consisting of class embedding and random noise sampled from a standard normal distribution \(\mathcal{N}(0, 1)\), into a grayscale image.
@@ -150,12 +160,12 @@ List of expected figures:
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=1\textwidth]{figures\reg_terms_comparison.png}
+    \includegraphics[width=1\textwidth]{reg_terms_comparison.png}
     \caption{Comparison of different types of regularization terms for CNNs.}
-    \label{fig:results}
+    \label{fig:reg_terms_comparison}
 \end{figure}
 
-The figure above presents a comparative analysis of different regularization terms in experiments with CNNs. The blue curve corresponds to the experiment without regularization, the red curve represents regularization via the average distance between objects of the same class, and the green curve corresponds to regularization by penalizing small singular values of the generator's weight matrices. As can be seen, without regularization, 100\% accuracy is achieved faster (at about 230 iterations) due to the dataset degenerating into a trivial solution where all images within the same class are identical.
+The figure \ref{fig:reg_terms_comparison} presents a comparative analysis of different regularization terms in experiments with CNNs. The blue curve corresponds to the experiment without regularization, the red curve represents regularization via the average distance between objects of the same class, and the green curve corresponds to regularization by penalizing small singular values of the generator's weight matrices. As can be seen, without regularization, 100\% accuracy is achieved faster (at about 230 iterations) due to the dataset degenerating into a trivial solution where all images within the same class are identical.
 
 \section{Discussion}\label{sec:disc}
 
