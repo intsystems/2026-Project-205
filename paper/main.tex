@@ -131,15 +131,37 @@ The regularization term can be the entropy of the found distribution, defined as
 
 \section{Experiments}\label{sec:exp}
 
-To verify the theoretical estimates obtained, we conducted a detailed empirical study...
+To empirically validate our algorithm, we conducted computational experiments to extract the inductive bias of CNNs and RNNs. Specifically, we verify that the generative model learns to create datasets on which the target model shows the best generalization performance, investigate the influence of different regularization terms on the generated data, and attempt to interpret the obtained results in light of the well-known inductive biases of these architectures.
+
+Data in our experiments is fully synthetic. For CNNs we generate datasets of images with a given number of classes and number of objects per class. As a generative model, we used a variational autoencoder (VAE) decoder. It transforms a vector from a latent space, consisting of class embedding and random noise sampled from a standard normal distribution \(\mathcal{N}(0, 1)\), into a grayscale image.
+
+The meta-learning process is implemented using the learn2learn library~\cite{arnold2020learn2learnlibrarymetalearningresearch}. Specifically, to enable end-to-end differentiability, we wrap the inner learner in a MAML (Model-Agnostic Meta-Learning)~\cite{finn2017modelagnosticmetalearningfastadaptation} wrapper. This allows us to clone the learner for each meta-step, train it on the generated dataset, and still keep the computational graph needed to propagate gradients from the meta-loss back to the generator. We use Adam~\cite{kingma2017adammethodstochasticoptimization} as the optimizer for meta-learning.
+
+As measures of generalization performance, we use MSE and cross-entropy and then compare them. We also conduct a comparative analysis of different types of regularization terms: the entropy of the distribution, the average distance between objects of the same class, and the singular values of the generator's weight matrix.
+
+List of expected figures:
+\begin{itemize}
+    \item graph comparing different types of regulation (x-axis - meta-iterations, y-axis - accuracy, \%);
+    \item figure with examples of the resulting datasets;
+    \item meta-loss change chart (x-axis - meta-iterations, y-axis - meta-loss).
+\end{itemize}
+
+\subsection{Preliminary report}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{reg_terms_comparison.png}
+    \caption{Comparison of different types of regularization terms for CNNs.}
+    \label{fig:results}
+\end{figure}
+
+The figure above presents a comparative analysis of different regularization terms in experiments with CNNs. The blue curve corresponds to the experiment without regularization, the red curve represents regularization via the average distance between objects of the same class, and the green curve corresponds to regularization by penalizing small singular values of the generator's weight matrices. As can be seen, without regularization, 100\% accuracy is achieved faster (at about 230 iterations) due to the dataset degenerating into a trivial solution where all images within the same class are identical.
 
 \section{Discussion}\label{sec:disc}
 
-TODO
 
 \section{Conclusion}\label{sec:concl}
 
-TODO
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
