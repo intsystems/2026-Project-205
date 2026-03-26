@@ -41,6 +41,7 @@
 \newtheorem{definition}{Definition}
 \newtheorem{assumption}{Assumption}
 
+
 %%%
 
 
@@ -156,16 +157,98 @@ List of expected figures:
     \item meta-loss change chart (x-axis - meta-iterations, y-axis - meta-loss).
 \end{itemize}
 
-\subsection{Preliminary report}
+\subsection{CNNs and 1×4 Images}
+We first test our method on a simple example: CNNs with a 1×2 convolution and 1×4 images. As a generator, we use a trainable tensor, meaning that the elements of the synthetic dataset are directly optimized as parameters. For the meta-learning process, we wrap the CNN in a MAML (Model-Agnostic Meta-Learning) wrapper~\cite{finn2017modelagnosticmetalearningfastadaptation} from the learn2learn library~\cite{arnold2020learn2learnlibrarymetalearningresearch}. For the outer loop, we use the Adam optimizer~\cite{kingma2017adammethodstochasticoptimization}.
 
-\begin{figure}[h]
+The CNN architecture is as follows: a convolution with a 1×2 kernel and stride (1,2), followed by max pooling, and finally a linear layer that outputs class logits. In the experiment we uses the following parameters: 2 classes, 20 samples per class, 5 inner loop steps, and learning rates of 0.5 and 0.01 for inner and outer loop 
+respectively. As a measure of prediction error on the test set, we use MSE. For regularization, we experiment with two terms: the mean intra-class distance and a penalty on small singular values of the data matrix computed via SVD.
+
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=1\textwidth]{figures\reg_terms_comparison.png}
-    \caption{Comparison of different types of regularization terms for CNNs.}
-    \label{fig:reg_terms_comparison}
+    \includegraphics[width=1\textwidth]{figures/1x4_without_reg.png}
+    \caption{Obtained dataset without regularization}
+    \label{fig:1x4_without_reg}
 \end{figure}
 
-The figure \ref{fig:reg_terms_comparison} presents a comparative analysis of different regularization terms in experiments with CNNs. The blue curve corresponds to the experiment without regularization, the red curve represents regularization via the average distance between objects of the same class, and the green curve corresponds to regularization by penalizing small singular values of the generator's weight matrices. As can be seen, without regularization, 100\% accuracy is achieved faster (at about 230 iterations) due to the dataset degenerating into a trivial solution where all images within the same class are identical.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/1x4_class_diversity.png}
+    \caption{Obtained dataset with class diversity regularization}
+    \label{fig:1x4_class_diversity}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/1x4_svd.png}
+    \caption{Obtained dataset with SVD regularization}
+    \label{fig:1x4_svd}
+\end{figure}
+
+As can be seen, even without regularization, the trivial solution — where all images within a class are identical — does not fully occur. This reveals the convolutional architecture's inductive bias towards locality: within a given class, we observe images where the first and second pairs of pixels are swapped. This indicates that for this architecture, local structure matters more than global structure.
+
+Adding the mean intra-class distance as a regularization term makes the classes more diverse while preserving locality. In class 1, the defining pattern is two black pixels in one of the two positions, while the other position can contain anything — two white pixels, one white and one black, or vice versa. Moreover, the two black pixels may appear either in the left or the right pair. This reflects the inductive bias towards locality: the label is determined by the local structure rather than the global one. The effect of stride (1,2) is also noticeable — class 0 contains an element with two black pixels in the middle, but this does not cause it to be misclassified as class 1.
+
+When penalizing small singular values, the situation is similar — here, the distinguishing pattern for class 0 consists of a black pixel followed by a white pixel, in that exact order.
+
+Thus, the structure of the obtained datasets reflects the inductive bias of CNNs toward data with local structure, which is consistent with previously known results.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/1x4_comparison.png}
+    \caption{Comparison of different regularization strategies}
+    \label{fig:1x4_comparison}
+\end{figure}
+
+\subsection{CNNs and 4x4 images}
+Next, we conduct an experiment with CNNs and 4×4 images, exploring different combinations for the meta-loss function. For prediction error, we use MSE and cross-entropy; for regularization, we use mean intra-class distance and a penalty on small singular values of the data matrix.
+
+In this experiment, we use a variational autoencoder (VAE) decoder as the generative model. It transforms a vector from a latent space — consisting of a class embedding and random noise sampled from a standard normal distribution \(\mathcal{N}(0, 1)\) — into a grayscale 4x4 image. 
+
+The CNN consists of two convolutional blocks, each followed by ReLU activation, with a max pooling layer after the first block. The extracted features are then flattened and passed through two fully connected layers to produce class logits.
+
+The experimental parameters are as follows: latent space dimension of 32, 5 classes, 20 samples per class, 100 inner loop steps, and learning rates of 0.1 and 0.01 for the inner and outer loops respectively.
+
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/4x4_ce_diversity.png}
+    \caption{Obtained dataset for Cross-entropy with class diversity regularization}
+    \label{fig:4x4_ce_diversity}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/4x4_ce_svd.png}
+    \caption{Obtained dataset for Cross-entropy with SVD regularization}
+    \label{fig:4x4_ce_svd}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/4x4_mse_diversity.png}
+        \caption{Obtained dataset for MSE with class diversity regularization}
+    \label{fig:4x4_mse_diversity}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/4x4_mse_svd.png}
+    \caption{Obtained dataset for MSE with SVD regularization}
+    \label{fig:4x4_mse_svd}
+\end{figure}
+
+As expected, without regularization terms, we observe the trivial case: all images within each class are identical. The results for the remaining configurations are presented in figures \ref{fig:4x4_ce_diversity}–\ref{fig:4x4_mse_svd}.
+
+Figure \ref{fig:4x4_comparison} shows a comparative analysis of accuracy as a function of meta-iteration for different meta-loss configurations. The fastest convergence to 100\% accuracy occurs without regularization. With mean intra-class distance regularization, convergence is nearly as fast, though the solution is slightly less stable. With SVD regularization, convergence is slower, but the resulting solution is more stable.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/4x4_comparison.png}
+    \caption{Comparison of different meta-loss strategies}
+    \label{fig:4x4_comparison}
+\end{figure}
+
+To characterize the properties of the obtained datasets, additional analysis is required. TODO
 
 \section{Discussion}\label{sec:disc}
 
