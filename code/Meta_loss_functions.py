@@ -81,3 +81,17 @@ def regularizer_svd(generator, x, y, reg_lambda=1, threshold=1):
         reg_loss /= count
     
     return reg_lambda * reg_loss
+
+def regularizer_svd_for_x(generator, x, y, reg_lambda=1, threshold=1):
+    x_flat = x.view(x.size(0), -1)
+    reg_loss = 0.0
+    
+    try:
+        U, S, V = torch.svd(x_flat)
+        small = torch.clamp(threshold - S, min=0)
+        reg_loss = torch.sum(small ** 2) / len(S)
+        
+    except:
+        pass
+    
+    return reg_lambda * reg_loss

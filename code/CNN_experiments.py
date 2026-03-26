@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 
-class Generator5x5(nn.Module):
-    def __init__(self, latent_dim=32, num_classes=2, img_size=5):
+class Generator4x4(nn.Module):
+    def __init__(self, latent_dim=32, num_classes=2, img_size=4):
         super().__init__()
 
         self.latent_dim = latent_dim
@@ -24,7 +24,7 @@ class Generator5x5(nn.Module):
             nn.BatchNorm1d(256),
             nn.ReLU(),
             
-            nn.Linear(256, img_size * img_size),
+            nn.Linear(256, img_size * img_size),  # 4*4 = 16
             nn.Sigmoid()
         )
 
@@ -37,8 +37,7 @@ class Generator5x5(nn.Module):
         
         return img.view(-1, 1, self.img_size, self.img_size)
     
-class CNN5x5(nn.Module):
-
+class CNN4x4(nn.Module):
     def __init__(self, num_classes):
         super().__init__()
 
@@ -59,10 +58,8 @@ class CNN5x5(nn.Module):
         )
 
     def forward(self, x):
-
         x = self.conv(x)
         x = self.fc(x)
-
         return x
     
 
