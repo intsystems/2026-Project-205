@@ -24,9 +24,11 @@
 \usepackage{textcomp}
 \usepackage{manyfoot}
 \usepackage{algorithm}
-\usepackage{algorithmicx}
+%\usepackage{algorithmicx}
 \usepackage{algpseudocode}
 \usepackage{listings}
+
+\usepackage{wrapfig}
 
 \newtheorem{theorem}{Theorem} % continuous numbers
 %%\newtheorem{theorem}{Theorem}[section] % sectionwise numbers
@@ -71,6 +73,7 @@
 
 
 \begin{document}
+\raggedbottom 
 
 
 \maketitle
@@ -129,6 +132,39 @@ The regularization term can be the entropy of the found distribution, defined as
 \]
 
 \section{Method}\label{sec:method}
+Our proposed approach is to meta-train a generative model to produce datasets on which the target model exhibits the best generalization performance, i.e., datasets to which it is inductively biased. In this section we describe our method in detail.
+
+\begin{wrapfigure}{l}{0.4\textwidth}
+    \includegraphics[width=\linewidth]{figures/algorithm.png}
+    \caption{Meta-learning loop}
+\end{wrapfigure}
+
+The meta-learning cycle is structured as follows. First, the generator $\mathbf{g}(\mathbf{w})$ with current  parameters $\mathbf{w}$ constructs a synthetic dataset $\mathfrak{D}_{\text{syn}}$ according to the predefined configuration: for each class, a fixed number of samples is generated. The number of classes and the number of samples per class are both specified as hyperparameters. Then, the resulting dataset is split into training $\mathfrak{D}_{\text{train}}$ and test $\mathfrak{D}_{\text{test}}$ sets.
+
+Next, the target model $\mathbf{f}_{\boldsymbol{\theta}}$ is trained on the training set $\mathfrak{D}_{\text{test}}$ in the inner loop. It is important that the model be re-initialized from scratch at each meta-learning iteration. At the output of the inner loop we obtain a trained model $\mathbf{f}_{\boldsymbol{\hat\theta}}$.
+
+Next, the meta-loss function is calculated. It consists of two terms. The first term $\mathcal{L}_g$ measures the model's generalization quality, estimated on the test set $\mathfrak{D}_{\text{test}}$. This could be, for example, MSE or Cross-Entropy. The second term $\mathcal{R}$ is the regularization term. Note that if all objects within a class are identical, the target model would easily achieve 100\% accuracy. However, this degenerate case is uninformative. The regularization term is precisely what prevents such trivial solutions. Possible choices include the entropy of the generator's output distribution or the average distance between objects within the same class.
+
+Thus, during meta-training, the meta-loss is minimized by updating the generator parameters $\mathbf{w}$, resulting in a generator $\mathbf{g}(\mathbf{\hat w})$ that produces datasets which are easy for the target model to generalize from. The structure of these datasets reflects the model's inductive bias.
+
+The proposed meta-learning procedure is summarized in Algorithm \ref{alg:meta_learning}.
+
+\begin{algorithm}
+\caption{Meta-learning for inductive bias extraction}
+\label{alg:meta_learning}
+\begin{algorithmic}[1]
+\State Initialize generator $\mathbf{g}(\mathbf{w})$ with random parameters $\mathbf{w}$
+\While{step $<$ total steps}
+    \State Generate synthetic dataset $\mathfrak{D}_{\text{syn}} = \{(\mathbf{x}_i, \mathbf{y}_i)\}$ with $C$ classes and $N$ samples per class
+    \State Split $\mathfrak{D}_{\text{syn}}$ into training set $\mathfrak{D}_{\text{train}}$ and test set $\mathfrak{D}_{\text{test}}$
+    \State Re-initialize target model $\mathbf{f}_{\boldsymbol{\theta}}$ from scratch
+    \State Train $\mathbf{f}_{\boldsymbol{\theta}}$ on $\mathfrak{D}_{\text{train}}$ in the inner loop $\rightarrow$ trained model $\mathbf{f}_{\boldsymbol{\hat\theta}}$
+    \State Compute meta-loss: $\mathcal{L}_{\text{meta}} = \mathcal{L}_g(\mathbf{f}_{\boldsymbol{\hat\theta}}, \mathfrak{D}_{\text{test}}) + \lambda \mathcal{R}(\mathfrak{D}_{\text{syn}})$
+    \State Take $\mathbf{w}$ gradient step on meta-loss
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+Similar to previous work~\cite{dorrell2023metalearninginductivebiasessimple}, our approach can be extended to compare the inductive biases of two models, i.e., to find a dataset that is easy for one model to generalize from but difficult for the other. In this case, both models are trained in the inner loop, and the measure of the generalization quality of the second model is subtracted when computing the meta-loss. Consequently, minimizing this meta-loss improves the generalization of the first model while degrading that of the second.
 
 \section{Experiments}\label{sec:exp}
 
