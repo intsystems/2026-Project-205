@@ -100,7 +100,7 @@ The proposed approach requires no knowledge of the input data distribution, maki
 
 \textbf{Contributions.} Our contributions can be summarized as follows:
 \begin{itemize}
-    \item We present a generative meta-learning framework for extracting the inductive bias of a target model. Unlike prior work that generates only labels for samples from a fixed distribution, our approach produces entire synthetic datasets via a meta-learned generative model.
+    \item We present a generative meta-learning framework for extracting the inductive bias of a target model. Unlike prior work~\cite{dorrell2023metalearninginductivebiasessimple} that generates only labels for samples from a fixed distribution, our approach produces entire synthetic datasets via a meta-learned generative model.
     \item We empirically evaluate our algorithm on CNNs and RNNs and compare the results with the known inductive biases of these architectures. For CNNs, we expect to detect a local structure in the generated datasets; for RNNs, we expect them to have a sequential structure.
     \item We highlight the implications of our findings for understanding and leveraging inductive bias. Our method is general-purpose: it can be used to extract inductive bias of any differentiable supervised learning algorithm and, consequently, to improve the generalization performance of models in machine learning problems.
 \end{itemize}
@@ -143,13 +143,23 @@ The meta-learning cycle is structured as follows. First, the generator $\mathbf{
 
 Next, the target model $\mathbf{f}_{\boldsymbol{\theta}}$ is trained on the training set $\mathfrak{D}_{\text{train}}$ in the inner loop. It is important that the model be re-initialized from scratch at each meta-learning iteration. At the output of the inner loop we obtain a trained model $\mathbf{f}_{\boldsymbol{\hat\theta}}$.
 
-Next, the meta-loss function is calculated. It consists of two terms. The first term $\mathcal{L}_g$ measures the model's generalization quality, estimated on the test set $\mathfrak{D}_{\text{test}}$. This could be, for example, MSE or Cross-Entropy. The second term $\mathcal{R}$ is the regularization term. Note that if all objects within a class are identical, the target model would easily achieve 100\% accuracy. However, this degenerate case is uninformative. The regularization term is precisely what prevents such trivial solutions. Possible choices include the entropy of the generator's output distribution or the average distance between objects within the same class.
+Next, the meta-loss function is calculated. It consists of two terms. The first term $\mathcal{L}_g$ measures the model's generalization quality, estimated on the test set $\mathfrak{D}_{\text{test}}$. This could be, for example, MSE or Cross-Entropy. The second term $\mathcal{R}$ is the regularization term. Note that if all objects within a class are identical, the target model would easily achieve 100\% accuracy. However, this degenerate case is uninformative. The regularization term is precisely what prevents such trivial solutions. Possible choices include the average distance between objects within the same class, defined as:
+\[
+\mathcal{R}_{\text{dist}} = \frac{1}{C} \sum_{k=1}^{C} \frac{1}{n_k(n_k - 1)} \sum_{\substack{i,j \in \mathcal{I}_k \\ i \neq j}} \|\mathbf{x}_i - \mathbf{x}_j\|_2^2,
+\]
+where $C$ is the number of classes in the dataset, $n_k$ is the number of objects in class $k$, and $\mathcal{I}_k$ is the set of indices of objects belonging to class $k$.
+
+Another regularization strategy is to penalize small singular values of the generator's weight matrix, as this helps to avoid degeneracy. The corresponding regularization term is defined as:
+\[
+\mathcal{R}_{\text{svd}} = \frac{1}{r} \sum_{k=1}^{r} \bigl(\max(\tau - \sigma_k, 0)\bigr)^2,
+\]
+where $\sigma_1, \dots, \sigma_r$ are the singular values of the weight matrix $\mathbf{X} \in \mathbb{R}^{n \times m}$, $r = \min(n, m)$, and $\tau$ is a fixed threshold.
 
 Thus, during meta-training, the meta-loss is minimized by updating the generator parameters $\mathbf{w}$, resulting in a generator $\mathbf{g}(\mathbf{\hat w})$ that produces datasets which are easy for the target model to generalize from. The structure of these datasets reflects the model's inductive bias.
 
 The proposed meta-learning procedure is summarized in Algorithm \ref{alg:meta_learning}.
 
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{Meta-learning for inductive bias extraction}
 \label{alg:meta_learning}
 \begin{algorithmic}[1]
