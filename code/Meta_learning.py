@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 class MetaLearner:
     def __init__(
@@ -19,7 +20,8 @@ class MetaLearner:
         inner_lr=0.01,
         inner_steps=5,
         train_split=0.8,
-        latent_dim = 1
+        latent_dim = 1,
+        n_visualize=0
     ):
         self.generator = generator
         self.learner_class = learner_class
@@ -33,6 +35,10 @@ class MetaLearner:
         self.inner_lr = inner_lr
         self.inner_steps = inner_steps
         self.latent_dim = latent_dim
+        if n_visualize == 0:
+            self.n_visualize = n_per_class
+        else:
+            self.n_visualize = n_visualize
         
         self.base_learner = learner_class(num_classes)
         
@@ -49,6 +55,11 @@ class MetaLearner:
         
         self.meta_losses = []
         self.accuracy = []
+
+    def reset_model(self, model):
+        for layer in model.modules():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
     
     # Функция для генерации датасета
     def generate_dataset(self):
@@ -66,6 +77,7 @@ class MetaLearner:
         
         total = x.shape[0]
         split = int(self.train_split * total)
+        torch.manual_seed(int(time.time() * 1000) % 10**9)
         perm = torch.randperm(total)
         train_idx = perm[:split]
         test_idx = perm[split:]
@@ -76,6 +88,7 @@ class MetaLearner:
         y_test = y[test_idx]
         
         # Клонируем модель для внутреннего цикла
+        self.reset_model(self.base_learner)
         learner = self.maml.clone()
         
         # Обучение целевой модели
@@ -134,43 +147,12 @@ class MetaLearner:
     
 
     # Функции для визуализации
-    def visualize_dataset(self, n_visualize=20):
+    def visualize_dataset(self):
         self.generator.eval()
         with torch.no_grad():
             x, y = self.generate_dataset()
-            x = x.detach()
 
-        cols = min(n_visualize, self.n_per_class)
-        rows = self.num_classes
-
-        fig, axes = plt.subplots(rows, cols, figsize=(cols * 1.5, rows * 0.8))
-        
-        if rows == 1: axes = np.expand_dims(axes, axis=0)
-        if cols == 1: axes = np.expand_dims(axes, axis=1)
-
-        for i in range(rows):
-            class_indices = (y == i).nonzero(as_tuple=True)[0]
-            
-            for j in range(cols):
-                idx = class_indices[j]
-                ax = axes[i, j]
-                
-                img = x[idx, 0] 
-                
-                ax.imshow(img, cmap="gray", interpolation='nearest', aspect='auto')
-                
-                for spine in ax.spines.values():
-                    spine.set_visible(True)
-                    spine.set_color('black')
-                    spine.set_linewidth(1)
-                
-                ax.set_xticks([])
-                ax.set_yticks([])
-                if j == 0:
-                    ax.set_ylabel(f"Class {i}", fontsize=10)
-
-        plt.subplots_adjust(wspace=0.3, hspace=0.3)
-        plt.show()
+        self.generator.visualize(x, y, self.n_visualize)
         
     def plot_meta_loss(self, smoothing_window=10):
         plt.figure(figsize=(10, 5))
