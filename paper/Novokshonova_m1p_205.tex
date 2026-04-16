@@ -209,23 +209,23 @@ We first test our method on a simple example: CNNs with a 1×2 convolution and 1
 The CNN architecture is as follows: a convolution with a 1×2 kernel and stride (1,2), followed by max pooling, and finally a linear layer that outputs class logits. In the experiment we uses the following parameters: 2 classes, 20 samples per class, 5 inner loop steps, and learning rates of 0.5 and 0.01 for inner and outer loop 
 respectively. As a measure of prediction error on the test set, we use MSE. For regularization, we experiment with two terms: the mean intra-class distance and a penalty on small singular values of the data matrix computed via SVD.
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/1x4_without_reg.png}
+    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_without_reg.png}
     \caption{Obtained dataset without regularization}
     \label{fig:1x4_without_reg}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/1x4_class_diversity.png}
+    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_class_diversity.png}
     \caption{Obtained dataset with class diversity regularization}
     \label{fig:1x4_class_diversity}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/1x4_svd.png}
+    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_svd.png}
     \caption{Obtained dataset with SVD regularization}
     \label{fig:1x4_svd}
 \end{figure}
@@ -238,63 +238,157 @@ When penalizing small singular values, the situation is similar — here, the di
 
 Thus, the structure of the obtained datasets reflects the inductive bias of CNNs toward data with local structure, which is consistent with previously known results.
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/1x4_comparison.png}
+    \includegraphics[width=0.8\textwidth]{figures/CNN_1x4/1x4_comparison.png}
     \caption{Comparison of different regularization strategies}
     \label{fig:1x4_comparison}
 \end{figure}
 
 \subsection{CNNs and 4x4 images}
-Next, we conduct an experiment with CNNs and 4×4 images, exploring different combinations for the meta-loss function. For prediction error, we use MSE and cross-entropy; for regularization, we use mean intra-class distance and a penalty on small singular values of the data matrix.
+Next, we conduct an experiment with CNNs on 4×4 images. As a generator, we again use a trainable tensor. The CNN consists of a single convolutional layer with a 2×2 kernel and stride 2, which reduces a 4×4 input to 4 feature maps of size 2×2. This is followed by ReLU activation and 2×2 max pooling, resulting in 4 feature maps of size 1×1. After flattening, a fully connected layer maps the 4 features to the output classes.
 
-In this experiment, we use a variational autoencoder (VAE) decoder as the generative model. It transforms a vector from a latent space — consisting of a class embedding and random noise sampled from a standard normal distribution \(\mathcal{N}(0, 1)\) — into a grayscale 4x4 image. 
+The experimental parameters are as follows: 4 classes, 20 samples per class, 10 inner loop steps, and learning rates of 0.5 and 0.01 for the inner and outer loops, respectively. As the meta-loss function, we use cross-entropy. For regularization, we use the average intra-class distance with a regularization parameter $\lambda = 1.5$.
 
-The CNN consists of two convolutional blocks, each followed by ReLU activation, with a max pooling layer after the first block. The extracted features are then flattened and passed through two fully connected layers to produce class logits.
-
-The experimental parameters are as follows: latent space dimension of 32, 5 classes, 20 samples per class, 100 inner loop steps, and learning rates of 0.1 and 0.01 for the inner and outer loops respectively.
-
-
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/4x4_ce_diversity.png}
-    \caption{Obtained dataset for Cross-entropy with class diversity regularization}
-    \label{fig:4x4_ce_diversity}
+    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_dataset.png}
+    \caption{Obtained dataset}
+    \label{fig:4x4_dataset}
 \end{figure}
 
-\begin{figure}[h!]
+The obtained dataset is presented on figure \ref{fig:4x4_dataset}.
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/4x4_ce_svd.png}
-    \caption{Obtained dataset for Cross-entropy with SVD regularization}
-    \label{fig:4x4_ce_svd}
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_accuracy.png}
+    \caption{Accuracy dependence on meta-iteration}
+    \label{fig:4x4_accuracy}
 \end{figure}
 
-\begin{figure}[h!]
+To characterize the properties of the obtained datasets, we carry out additional analysis to verify the locality of the obtained dataset. First, we train the target model on the original dataset and then validate it on a shuffled dataset, where the $2 \times 2$ blocks within each image are randomly permuted.
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/4x4_mse_diversity.png}
-        \caption{Obtained dataset for MSE with class diversity regularization}
-    \label{fig:4x4_mse_diversity}
+    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_shuffled_dataset_42.png}
+    \caption{Example of shuffled dataset: seed = 42}
+    \label{fig:4x4_shuffled_dataset_42}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/4x4_mse_svd.png}
-    \caption{Obtained dataset for MSE with SVD regularization}
-    \label{fig:4x4_mse_svd}
+    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_shuffled_dataset_123.png}
+    \caption{Example of shuffled dataset: seed = 123}
+    \label{fig:4x4_shuffled_dataset_123}
 \end{figure}
 
-As expected, without regularization terms, we observe the trivial case: all images within each class are identical. The results for the remaining configurations are presented in figures \ref{fig:4x4_ce_diversity}–\ref{fig:4x4_mse_svd}.
+Averaging the results over different splits of the original dataset into training and test sets and over different seeds for shuffling yields the following values:
 
-Figure \ref{fig:4x4_comparison} shows a comparative analysis of accuracy as a function of meta-iteration for different meta-loss configurations. The fastest convergence to 100\% accuracy occurs without regularization. With mean intra-class distance regularization, convergence is nearly as fast, though the solution is slightly less stable. With SVD regularization, convergence is slower, but the resulting solution is more stable.
+\begin{table}[h!]
+\centering
+\begin{tabular}{l c}
+\hline
+\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\hline
+Original           & $99.69 \pm 2.56$ \\
+Seed 42            & $99.65 \pm 2.53$ \\
+Seed 123           & $99.65 \pm 2.53$ \\
+Seed 456           & $99.65 \pm 2.53$ \\
+Seed 789           & $99.65 \pm 2.53$ \\
+\hline
+\end{tabular}
+\end{table}
 
-\begin{figure}[h!]
+As can be seen, the model performs well even on the shuffled dataset. This indicates locality: the model relies on the local structure within $2 \times 2$ blocks rather than on their global arrangement.
+
+We perform a similar experiment, this time training the model on the shuffled dataset and validating it on the original one:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l c}
+\hline
+\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\hline
+Shuffled (train)   & $99.00 \pm 5.57$ \\
+Original (test)    & $99.24 \pm 3.85$ \\
+\hline
+\end{tabular}
+\end{table}
+
+Again, the values are very close to $100\%$.
+
+Next, we compare our CNN with an MLP, a model that has no explicit inductive bias toward locality and is sensitive to global structure. We conduct the same experiment as for the CNN: training on the original dataset and validating on the shuffled one. The averaged results are as follows:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l c}
+\hline
+\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\hline
+Original           & $55.31 \pm 15.52$ \\
+Seed 42            & $76.21 \pm 8.55$ \\
+Seed 123           & $76.88 \pm 9.16$ \\
+Seed 456           & $77.49 \pm 8.53$ \\
+Seed 789           & $76.35 \pm 7.67$ \\
+\hline
+\end{tabular}
+\end{table}
+
+This experiment was conducted under the same inner loop parameters as those used for the CNN.
+
+These results confirm the local structure of the data in our dataset, which aligns with the known inductive bias of CNNs. Thus, our method demonstrates strong performance on CNNs.
+
+\subsection{RNNs}
+Now we conduct an experiment with  RNNs. As before, we use a trainable tensor as the generator. The architecture of the target model is as follows: the RNN consists of two recurrent layers, each with a hidden dimension of 32. It takes one-hot encoded sequences as input and uses the final hidden state for classification via a linear layer.
+
+The experimental parameters are as follows: 5 classes, 10 samples per class, each sample consisting of 20 letters of the English alphabet encoded as one-hot vectors. The inner loop has 10 steps, with learning rates of 0.5 and 0.01 for the inner and outer loops, respectively. We use MSE as the meta-loss function and the average intra-class distance as regularization, with a regularization parameter $\lambda = 0.1$.
+
+\begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/4x4_comparison.png}
-    \caption{Comparison of different meta-loss strategies}
-    \label{fig:4x4_comparison}
+    \includegraphics[width=0.8\textwidth]{figures/RNN/accuracy.png}
+    \caption{Accuracy dependence on meta-iteration}
+    \label{fig:rnn_accuracy}
 \end{figure}
 
-To characterize the properties of the obtained datasets, additional analysis is required. TODO
+Below are five example sequences from each class:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{figures/RNN/dataset_examples.png}
+    \caption{Examples of the obtained dataset}
+    \label{fig:rnn_dataset}
+\end{figure}
+
+We now verify the sequential structure of the obtained dataset. To this end, we train the model on the original dataset and then validate it on the reversed test set. Averaging over different splits of the dataset into training and test sets yields the following results:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l c}
+\hline
+\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\hline
+Original           & $100.00 \pm 0.00$ \\
+Reversed           & $32.40 \pm 14.08$ \\
+\hline
+\end{tabular}
+\end{table}
+
+We also perform a similar experiment, this time training on the reversed dataset and validating on the original one. The results are shown below:
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l c}
+\hline
+\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\hline
+Reversed (train)   & $42.20 \pm 27.91$ \\
+Original (test)    & $29.10 \pm 17.33$ \\
+\hline
+\end{tabular}
+\end{table}
+
+As can be observed, in both cases, generalization performance drops significantly, indicating that the order of letters plays a crucial role. This confirms the sequential structure of the data. Notably, this aligns with the well-known inductive bias of RNNs, demonstrating that our method works correctly.
+
 
 \section{Discussion}\label{sec:disc}
 
