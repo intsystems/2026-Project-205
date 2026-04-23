@@ -11,6 +11,7 @@
 \usepackage{nicefrac}
 \usepackage{microtype}
 \usepackage{xcolor}
+\usepackage{url}
 
 %%%
 
@@ -82,7 +83,7 @@
     This paper investigates inductive bias in machine learning models. By inductive bias we mean the preference of a model for certain types of functions or data structures over others. To analyze the inductive bias of a fixed model, we consider a problem of finding data that this model can fit and generalize on particularly well. Previous work demonstrated that generating labels for a fixed dataset allows one to extract the inductive bias. Here, we extend this approach by proposing a method for generating full synthetic datasets. We train a generative model to produce datasets on which the target model achieves strong generalization performance. We test the proposed framework on CNNs and RNNs, and analyze obtained datasets for each model.
 \end{abstract}
 
-\textbf{Keywords:} inductive bias, meta-learning, generative models.
+\textbf{Keywords:} inductive bias, meta-learning, generative models, CNN, RNN.
 
 \section{Introduction}\label{sec:intro}
 
@@ -105,8 +106,7 @@ The proposed approach requires no knowledge of the input data distribution, maki
     \item We highlight the implications of our findings for understanding and leveraging inductive bias. Our method is general-purpose: it can be used to extract inductive bias of any differentiable supervised learning algorithm and, consequently, to improve the generalization performance of models in machine learning problems.
 \end{itemize}
 
-
-\textbf{Outline.} The rest of the paper is organized as follows...
+\textbf{Outline.} The rest of the paper is organized as follows. First, we formally state the problem we address and describe the proposed method in detail. Next, we validate it through experiments with CNNs and RNNs, analyzing the obtained datasets for the well known inductive biases of these architectures. Finally, we discuss the results and conclude the paper.
 
 \section{Problem statement}\label{sec:prostate}
 We study the problem of extracting and characterizing the inductive bias of learning models by finding the datasets that they generalize best. We now present a formal statement of the problem.
@@ -126,17 +126,13 @@ Function \(\mathcal{L}\) measures a model's ability to generalize by calculating
 \mathcal{L}_{\text{CE}} = -\frac{1}{|\mathfrak{D}_{\text{test}}|} \sum_{(\mathbf{x}, \mathbf{y}) \in \mathfrak{D}_{\text{test}}} \sum_{i=1}^{m} y_i \log\big( [\mathbf{f}_{\boldsymbol{\hat{\theta}}}(\mathbf{x})]_i \big), \qquad
 \mathcal{L}_{\text{MSE}} = \frac{1}{|\mathfrak{D}_{\text{test}}|} \sum_{(\mathbf{x}, \mathbf{y}) \in\mathfrak{D}_{\text{test}}} \| \mathbf{y} - \mathbf{f}_{\boldsymbol{\hat{\theta}}}(\mathbf{x}) \|^2.
 \]
-The regularization term can be the entropy of the found distribution, defined as:
-\[
-\mathcal{R}_{\text{ent}}(\mathbf{w}) = - \mathrm{E}_{\mathbf{y}} \left[ \int_{\mathbb{X}} p(\mathbf{x} | \mathbf{y}, \mathbf{w}) \log p(\mathbf{x} | \mathbf{y}, \mathbf{w}) \, d\mathbf{x} \right].
-\]
 
 \section{Method}\label{sec:method}
 Our proposed approach is to meta-train a generative model to produce datasets on which the target model exhibits the best generalization performance, i.e., datasets to which it is inductively biased. In this section we describe our method in detail.
 
 \begin{wrapfigure}{l}{0.4\textwidth}
     \includegraphics[width=\linewidth]{figures/algorithm.png}
-    \caption{Meta-learning loop}
+    \caption{Meta-learning scheme}
 \end{wrapfigure}
 
 The meta-learning cycle is structured as follows. First, the generator $\mathbf{g}(\mathbf{w})$ with current  parameters $\mathbf{w}$ constructs a synthetic dataset $\mathfrak{D}_{\text{syn}}$ according to the predefined configuration: for each class, a fixed number of samples is generated. The number of classes and the number of samples per class are both specified as hyperparameters. Then, the resulting dataset is split into training $\mathfrak{D}_{\text{train}}$ and test $\mathfrak{D}_{\text{test}}$ sets.
@@ -145,15 +141,15 @@ Next, the target model $\mathbf{f}_{\boldsymbol{\theta}}$ is trained on the trai
 
 Next, the meta-loss function is calculated. It consists of two terms. The first term $\mathcal{L}_g$ measures the model's generalization quality, estimated on the test set $\mathfrak{D}_{\text{test}}$. This could be, for example, MSE or Cross-Entropy. The second term $\mathcal{R}$ is the regularization term. Note that if all objects within a class are identical, the target model would easily achieve 100\% accuracy. However, this degenerate case is uninformative. The regularization term is precisely what prevents such trivial solutions. Possible choices include the average distance between objects within the same class, defined as:
 \[
-\mathcal{R}_{\text{dist}} = \frac{1}{C} \sum_{k=1}^{C} \frac{1}{n_k(n_k - 1)} \sum_{\substack{i,j \in \mathcal{I}_k \\ i \neq j}} \|\mathbf{x}_i - \mathbf{x}_j\|_2^2,
+\mathcal{R}_{\text{dist}} = - \frac{1}{C} \sum_{k=1}^{C} \frac{1}{n_k(n_k - 1)} \sum_{\substack{i,j \in \mathcal{I}_k \\ i \neq j}} \|\mathbf{x}_i - \mathbf{x}_j\|_2^2,
 \]
 where $C$ is the number of classes in the dataset, $n_k$ is the number of objects in class $k$, and $\mathcal{I}_k$ is the set of indices of objects belonging to class $k$.
 
-Another regularization strategy is to penalize small singular values of the generator's weight matrix, as this helps to avoid degeneracy. The corresponding regularization term is defined as:
+Another regularization strategy is to penalize small singular values of the generator's weight matrices, as this helps to avoid degeneracy. The corresponding regularization term is defined as:
 \[
-\mathcal{R}_{\text{svd}} = \frac{1}{r} \sum_{k=1}^{r} \bigl(\max(\tau - \sigma_k, 0)\bigr)^2,
+\mathcal{R}_{\text{svd}} = \frac{1}{K} \sum_{k=1}^{K} \frac{1}{r_k} \sum_{i=1}^{r_k} \bigl(\max(\tau - \sigma_i^{(k)}, 0)\bigr)^2,
 \]
-where $\sigma_1, \dots, \sigma_r$ are the singular values of the weight matrix and $\tau$ is a fixed threshold.
+where $K$ is the number of linear layers in the generator, $\sigma_1^{(k)}, \dots, \sigma_{r_k}^{(k)}$ are the singular values of the $k$-th weight matrix and $\tau$ is a fixed threshold.
 
 Thus, during meta-training, the meta-loss is minimized by updating the generator parameters $\mathbf{w}$, resulting in a generator $\mathbf{g}(\mathbf{\hat w})$ that produces datasets which are easy for the target model to generalize from. The structure of these datasets reflects the model's inductive bias.
 
@@ -178,224 +174,255 @@ Similar to previous work~\cite{dorrell2023metalearninginductivebiasessimple}, ou
 
 \section{Experiments}\label{sec:exp}
 
-\subsection{Baseline experiment}
+To empirically validate our algorithm, we conducted computational experiments to extract the inductive bias of CNNs and RNNs. Specifically, we verify that the generative model learns to create datasets on which the target model exhibits the best generalization performance and attempt to interpret the obtained results in light of the well-known inductive biases of these architectures.
 
-First, we replicate the experiment by Dorell et al.~\cite{dorrell2023metalearninginductivebiasessimple} on extracting inductive bias via label generation. Their algorithm proceeds as follows: the meta-learner generates labels for a dataset, which is subsequently used to train the learner; the learner's generalization performance on these labels is then evaluated and incorporated into the meta-loss function. In this way, the meta-learner is trained to find functions that the learner can easily generalize.
+All data in our experiments are fully synthetic. In all experiments, we use a trainable tensor as the generative model, meaning that the elements of the synthetic dataset are directly optimized as parameters. The structure of the datasets is defined by a given number of classes and a fixed number of samples per class.
 
-As the target model, we use linear regression, and as the meta-learner, a 4-layer MLP. The meta-loss function consists of three terms: the MSE of the linear regression on the test set, the Sinkhorn distance of the label distribution from a uniform distribution, and terms that account for previously obtained functions to ensure orthogonality with them.
+The meta-learning process is implemented using the learn2learn library~\cite{arnold2020learn2learnlibrarymetalearningresearch}. Specifically, to enable end-to-end differentiability, we wrap the inner learner in a MAML (Model-Agnostic Meta-Learning) wrapper~\cite{finn2017modelagnosticmetalearningfastadaptation}. This allows us to clone the learner for each meta-step, train it on the generated dataset, and still keep the computational graph needed to propagate gradients from the meta-loss back to the generator. For the inner loop optimization, we use SGD. For the outer loop (meta-optimization), we use Adam~\cite{kingma2017adammethodstochasticoptimization}.
 
-As a result of the experiment, we obtained three orthogonal linear functions, as expected.
-
-\subsection{Proposed Framework Evaluation}
-
-To empirically validate our algorithm, we conducted computational experiments to extract the inductive bias of CNNs and RNNs. Specifically, we verify that the generative model learns to create datasets on which the target model shows the best generalization performance, investigate the influence of different regularization terms on the generated data, and attempt to interpret the obtained results in light of the well-known inductive biases of these architectures.
-
-Data in our experiments is fully synthetic. For CNNs we generate datasets of images with a given number of classes and number of objects per class. As a generative model, we used a variational autoencoder (VAE) decoder. It transforms a vector from a latent space, consisting of class embedding and random noise sampled from a standard normal distribution \(\mathcal{N}(0, 1)\), into a grayscale image.
-
-The meta-learning process is implemented using the learn2learn library~\cite{arnold2020learn2learnlibrarymetalearningresearch}. Specifically, to enable end-to-end differentiability, we wrap the inner learner in a MAML (Model-Agnostic Meta-Learning)~\cite{finn2017modelagnosticmetalearningfastadaptation} wrapper. This allows us to clone the learner for each meta-step, train it on the generated dataset, and still keep the computational graph needed to propagate gradients from the meta-loss back to the generator. We use Adam~\cite{kingma2017adammethodstochasticoptimization} as the optimizer for meta-learning.
-
-As measures of generalization performance, we use MSE and cross-entropy and then compare them. We also conduct a comparative analysis of different types of regularization terms: the entropy of the distribution, the average distance between objects of the same class, and the singular values of the generator's weight matrix.
-
-List of expected figures:
-\begin{itemize}
-    \item graph comparing different types of regulation (x-axis - meta-iterations, y-axis - accuracy, \%);
-    \item figure with examples of the resulting datasets;
-    \item meta-loss change chart (x-axis - meta-iterations, y-axis - meta-loss).
-\end{itemize}
+The source code for all experiments is available at GitHub\footnote{Code at \url{https://github.com/intsystems/2026-Project-205}}.
 
 \subsection{CNNs and 1×4 Images}
-We first test our method on a simple example: CNNs with a 1×2 convolution and 1×4 images. As a generator, we use a trainable tensor, meaning that the elements of the synthetic dataset are directly optimized as parameters. For the meta-learning process, we wrap the CNN in a MAML (Model-Agnostic Meta-Learning) wrapper~\cite{finn2017modelagnosticmetalearningfastadaptation} from the learn2learn library~\cite{arnold2020learn2learnlibrarymetalearningresearch}. For the outer loop, we use the Adam optimizer~\cite{kingma2017adammethodstochasticoptimization}.
+We first test our method on a simple example: CNNs with a 1×2 convolution and 1×4 images.
 
-The CNN architecture is as follows: a convolution with a 1×2 kernel and stride (1,2), followed by max pooling, and finally a linear layer that outputs class logits. In the experiment we uses the following parameters: 2 classes, 20 samples per class, 5 inner loop steps, and learning rates of 0.5 and 0.01 for inner and outer loop 
-respectively. As a measure of prediction error on the test set, we use MSE. For regularization, we experiment with two terms: the mean intra-class distance and a penalty on small singular values of the data matrix computed via SVD.
+The CNN architecture is as follows: a convolution with a 1×2 kernel and stride (1,2), followed by max pooling, and finally a linear layer that outputs class logits. In the experiment we uses the following parameters: 2 classes, 20 samples per class, 7 inner loop steps, and learning rates of 0.5 and 0.05 for inner and outer loop 
+respectively. As a measure of prediction error on the test set, we use MSE. First, we try without regularization. Then, we add regularization via the average intra-class distance with a parameter $\lambda =0.5$.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_without_reg.png}
+    \includegraphics[width=0.8\textwidth]{figures/CNN_1x4/1x4_without_reg.png}
     \caption{Obtained dataset without regularization}
     \label{fig:1x4_without_reg}
 \end{figure}
-
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_class_diversity.png}
-    \caption{Obtained dataset with class diversity regularization}
-    \label{fig:1x4_class_diversity}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_svd.png}
-    \caption{Obtained dataset with SVD regularization}
-    \label{fig:1x4_svd}
+    \includegraphics[width=0.8\textwidth]{figures/CNN_1x4/1x4_class_dist.png}
+    \caption{Obtained dataset for  average intra-class distance regularization}
+    \label{fig:1x4_class_dist}
 \end{figure}
 
 As can be seen, even without regularization, the trivial solution — where all images within a class are identical — does not fully occur. This reveals the convolutional architecture's inductive bias towards locality: within a given class, we observe images where the first and second pairs of pixels are swapped. This indicates that for this architecture, local structure matters more than global structure.
 
-Adding the mean intra-class distance as a regularization term makes the classes more diverse while preserving locality. In class 1, the defining pattern is two black pixels in one of the two positions, while the other position can contain anything — two white pixels, one white and one black, or vice versa. Moreover, the two black pixels may appear either in the left or the right pair. This reflects the inductive bias towards locality: the label is determined by the local structure rather than the global one. The effect of stride (1,2) is also noticeable — class 0 contains an element with two black pixels in the middle, but this does not cause it to be misclassified as class 1.
+Adding the mean intra-class distance as a regularization term makes the classes more diverse while preserving locality. In class 1, the defining pattern is a white pixel followed by a black pixel (in that exact order) in one of the two positions, while the other position can contain anything — two black pixels, two gray, one white and one black (except for zero class patterns). Moreover, this pattern may appear either in the left or the right pair. This reflects the inductive bias towards locality: the label is determined by the local structure rather than the global one. The effect of stride (1,2) is also noticeable — class 0 contains an element with a white pixel followed by a black pixel in the middle, but this does not cause it to be misclassified as class 1.
 
-When penalizing small singular values, the situation is similar — here, the distinguishing pattern for class 0 consists of a black pixel followed by a white pixel, in that exact order.
+To verify locality, we performed the following. We first split the obtained dataset into training and test sets. We then swapped the left and right parts of the images in the test set. After training the model on the original training set, we evaluated its accuracy on the swapped test set. Similarly, we trained the model on the swapped training set and evaluated it on the original test set. The results were averaged over 1000 random train-test splits. As can be seen from Table \ref{tab:swap_experiment}, the model achieves similar accuracy in both cases, confirming the locality of the data.
+
+\begin{table}[h!]
+\centering
+\caption{Accuracy comparison on original and swapped data}
+\label{tab:swap_experiment}
+    \begin{tabular}{l c c}
+    \hline
+    \textbf{Training} & \textbf{Test} & \textbf{Accuracy (\%)} \\
+    \hline
+    Original & Original & $98.78 \pm 8.82$ \\
+    Original & Swapped  & $98.78 \pm 8.82$ \\
+    \hline
+    Swapped  & Swapped  & $99.08 \pm 7.25$ \\
+    Swapped  & Original & $99.08 \pm 7.25$ \\
+    \hline
+    \end{tabular}
+\end{table}
 
 Thus, the structure of the obtained datasets reflects the inductive bias of CNNs toward data with local structure, which is consistent with previously known results.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/CNN_1x4/1x4_comparison.png}
-    \caption{Comparison of different regularization strategies}
+    \includegraphics[width=1\textwidth]{figures/CNN_1x4/1x4_comparison.png}
+    \caption{Comparison of meta-loss dynamics with and without regularization}
     \label{fig:1x4_comparison}
 \end{figure}
 
 \subsection{CNNs and 4x4 images}
-Next, we conduct an experiment with CNNs on 4×4 images. As a generator, we again use a trainable tensor. The CNN consists of a single convolutional layer with a 2×2 kernel and stride 2, which reduces a 4×4 input to 4 feature maps of size 2×2. This is followed by ReLU activation and 2×2 max pooling, resulting in 4 feature maps of size 1×1. After flattening, a fully connected layer maps the 4 features to the output classes.
+Next, we conduct an experiment with CNNs on 4×4 images. 
 
-The experimental parameters are as follows: 4 classes, 20 samples per class, 10 inner loop steps, and learning rates of 0.5 and 0.01 for the inner and outer loops, respectively. As the meta-loss function, we use cross-entropy. For regularization, we use the average intra-class distance with a regularization parameter $\lambda = 1.5$.
+First, we consider the following CNN architecture. It consists of a single convolutional layer with a 2×2 kernel and stride 2, which reduces a 4×4 input to 4 feature maps of size 2×2. This is followed by ReLU activation and 2×2 max pooling, resulting in 4 feature maps of size 1×1. After flattening, a fully connected layer maps the 4 features to the output classes.
+
+The experimental parameters are as follows: 4 classes, 20 samples per class, 10 inner loop steps, and learning rates of 0.5 and 0.01 for the inner and outer loops, respectively.
+
+As meta-loss functions, we experiment with both MSE and cross-entropy (denoted CE). For regularization, we consider two strategies: the average intra-class distance (denoted Dist) and a penalty on small singular values of the generator's weight matrices (denoted SVD). We evaluate all four combinations of meta-loss and regularization. The selected regularization parameter $\lambda$ for each configuration are summarized in Table~\ref{tab:lambda_params}.
+
+\begin{table}[h!]
+\centering
+\caption{$\lambda$ for different meta-loss combinations}
+\label{tab:lambda_params}
+\begin{tabular}{l c c}
+\hline
+ & Dist & SVD \\
+\hline
+CE   & $1.5$ & $1.2$ \\
+MSE  & $0.1$ & $0.5$ \\
+\hline
+\end{tabular}
+\end{table}
+
+The obtained datasets are presented on Figures \ref{fig:4x4_ce_dist_dataset}-\ref{fig:4x4_mse_svd_dataset}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_dataset.png}
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_ce_dist_dataset.png}
+    \caption{Obtained dataset for cross-entropy and average intra-class distance regularization}
+    \label{fig:4x4_ce_dist_dataset}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_ce_svd_dataset.png}
+    \caption{Obtained dataset for cross-entropy and SVD regularization}
+    \label{fig:4x4_ce_svd_dataset}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_mse_dist_dataset.png}
+    \caption{Obtained dataset for MSE and average intra-class distance regularization}
+    \label{fig:4x4_mse_dist_dataset}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_mse_svd_dataset.png}
+    \caption{Obtained dataset for MSE and SVD regularization}
+    \label{fig:4x4_mse_svd_dataset}
+\end{figure}
+
+Figure \ref{fig:4x4_comparison} compares the accuracy dependence on meta-iteration across different configurations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_comparison.png}
+    \caption{Comparison on different meta-loss strategies}
+    \label{fig:4x4_comparison}
+\end{figure}
+
+To characterize the properties of the obtained datasets, we carry out additional analysis to verify their locality. For each configuration of the meta-loss function, we train the target model on the original training set and then evaluate its accuracy on both the original test set and a shuffled version of the test set, where the $2 \times 2$ blocks within each image are randomly permuted. The results are averaged over 1000 random train-test splits and over different seeds for shuffling. All results are summarized in Table~\ref{tab:test_locality_results}.
+
+Next, we compare our CNN with an MLP, a model that has no explicit inductive bias toward locality and is sensitive to global structure. We repeat the experiment using the same inner-loop parameters: training on the original training set and evaluating on both the original and shuffled test sets. The results are also shown in Table~\ref{tab:test_locality_results}.
+
+\begin{table}[h!]
+\centering
+\caption{Accuracy on original and shuffled data for all configurations}
+\label{tab:test_locality_results}
+\begin{tabular}{l c c c c c}
+\hline
+\textbf{Configuration} & \textbf{Original} & \textbf{Seed 42} & \textbf{Seed 123} & \textbf{Seed 456} & \textbf{Seed 789} \\
+\hline
+CE + Dist  & $98.87 \pm 5.33$ & $98.87 \pm 5.33$ & $98.87 \pm 5.33$ & $98.87 \pm 5.33$ & $98.87 \pm 5.33$ \\
+MSE + Dist       & $99.03 \pm 5.22$ & $99.03 \pm 5.22$ & $99.03 \pm 5.22$ & $99.03 \pm 5.22$ & $99.03 \pm 5.22$ \\
+CE + SVD         & $99.33 \pm 4.62$ & $99.33 \pm 4.62$ & $99.33 \pm 4.62$ & $99.33 \pm 4.62$ & $99.33 \pm 4.62$ \\
+MSE + SVD        & $98.96 \pm 5.46$ & $98.96 \pm 5.46$ & $98.96 \pm 5.46$ & $98.96 \pm 5.46$ & $98.96 \pm 5.46$ \\
+\hline
+MLP              & $62.24 \pm 14.73$ & $78.76 \pm 13.02$ & $77.41 \pm 12.97$ & $77.61 \pm 12.97$ & $76.05 \pm 13.68$ \\
+\hline
+\end{tabular}
+\end{table}
+
+As can be seen from the table, the CNN performs well even on the shuffled test set, maintaining high accuracy. This indicates locality: the model relies on the local structure within $2 \times 2$ blocks rather than on their global arrangement. In contrast, the MLP yields notably lower accuracy on both the original and shuffled test sets compared to the CNN.
+
+These results confirm the local structure of the generated data, which aligns with the known inductive bias of CNNs. 
+
+Now we slightly modify the CNN architecture and conduct an experiment to test translation invariance.
+
+The CNN architecture is as follows: a convolution with a 2×2 kernel and stride 1, followed by ReLU activation and 2×2 max pooling, resulting in 4 feature maps of size 1×1. After flattening, a fully connected layer maps the 4 features to the output classes.
+
+The obtained dataset is presented on Figure \ref{fig:4x4_translation_dataset}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_translation_dataset.png}
     \caption{Obtained dataset}
-    \label{fig:4x4_dataset}
+    \label{fig:4x4_translation_dataset}
 \end{figure}
 
-The obtained dataset is presented on figure \ref{fig:4x4_dataset}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{figures/CNN_4x4/4x4_accuracy.png}
-    \caption{Accuracy dependence on meta-iteration}
-    \label{fig:4x4_accuracy}
-\end{figure}
-
-To characterize the properties of the obtained datasets, we carry out additional analysis to verify the locality of the obtained dataset. First, we train the target model on the original dataset and then validate it on a shuffled dataset, where the $2 \times 2$ blocks within each image are randomly permuted.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_shuffled_dataset_42.png}
-    \caption{Example of shuffled dataset: seed = 42}
-    \label{fig:4x4_shuffled_dataset_42}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\textwidth]{figures/CNN_4x4/4x4_shuffled_dataset_123.png}
-    \caption{Example of shuffled dataset: seed = 123}
-    \label{fig:4x4_shuffled_dataset_123}
-\end{figure}
-
-Averaging the results over different splits of the original dataset into training and test sets and over different seeds for shuffling yields the following values:
+To evaluate translation invariance, we train the target model on the original training set and measure its accuracy on the original test set and on test sets shifted by 1 pixel horizontally, vertically, and in both directions. The results are averaged over 1000 random train-test splits and summarized in Table~\ref{tab:shift_experiment}.
 
 \begin{table}[h!]
 \centering
+\caption{Accuracy on original and shifted images}
+\label{tab:shift_experiment}
 \begin{tabular}{l c}
 \hline
-\textbf{Data type} & \textbf{Accuracy (\%)} \\
+\textbf{Shift type} & \textbf{Accuracy (\%)} \\
 \hline
-Original           & $99.69 \pm 2.56$ \\
-Seed 42            & $99.65 \pm 2.53$ \\
-Seed 123           & $99.65 \pm 2.53$ \\
-Seed 456           & $99.65 \pm 2.53$ \\
-Seed 789           & $99.65 \pm 2.53$ \\
+Original           & $98.78 \pm 8.82$ \\
+Shift horizontal (1px) & $95.23 \pm 10.12$ \\
+Shift vertical (1px)   & $94.56 \pm 11.34$ \\
+Shift horizontal+vertical (1px) & $89.12 \pm 14.56$ \\
 \hline
 \end{tabular}
 \end{table}
 
-As can be seen, the model performs well even on the shuffled dataset. This indicates locality: the model relies on the local structure within $2 \times 2$ blocks rather than on their global arrangement.
+As can be observed, the accuracy on the shifted datasets exhibits only a minor drop, indicating translation invariance. This aligns with the well-known inductive bias of CNNs.
 
-We perform a similar experiment, this time training the model on the shuffled dataset and validating it on the original one:
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{l c}
-\hline
-\textbf{Data type} & \textbf{Accuracy (\%)} \\
-\hline
-Shuffled (train)   & $99.00 \pm 5.57$ \\
-Original (test)    & $99.24 \pm 3.85$ \\
-\hline
-\end{tabular}
-\end{table}
-
-Again, the values are very close to $100\%$.
-
-Next, we compare our CNN with an MLP, a model that has no explicit inductive bias toward locality and is sensitive to global structure. We conduct the same experiment as for the CNN: training on the original dataset and validating on the shuffled one. The averaged results are as follows:
-
-\begin{table}[h!]
-\centering
-\begin{tabular}{l c}
-\hline
-\textbf{Data type} & \textbf{Accuracy (\%)} \\
-\hline
-Original           & $55.31 \pm 15.52$ \\
-Seed 42            & $76.21 \pm 8.55$ \\
-Seed 123           & $76.88 \pm 9.16$ \\
-Seed 456           & $77.49 \pm 8.53$ \\
-Seed 789           & $76.35 \pm 7.67$ \\
-\hline
-\end{tabular}
-\end{table}
-
-This experiment was conducted under the same inner loop parameters as those used for the CNN.
-
-These results confirm the local structure of the data in our dataset, which aligns with the known inductive bias of CNNs. Thus, our method demonstrates strong performance on CNNs.
+Thus, our method demonstrates strong performance on CNNs.
 
 \subsection{RNNs}
-Now we conduct an experiment with  RNNs. As before, we use a trainable tensor as the generator. The architecture of the target model is as follows: the RNN consists of two recurrent layers, each with a hidden dimension of 32. It takes one-hot encoded sequences as input and uses the final hidden state for classification via a linear layer.
+Now we conduct an experiment with RNNs.
 
-The experimental parameters are as follows: 5 classes, 10 samples per class, each sample consisting of 20 letters of the English alphabet encoded as one-hot vectors. The inner loop has 10 steps, with learning rates of 0.5 and 0.01 for the inner and outer loops, respectively. We use MSE as the meta-loss function and the average intra-class distance as regularization, with a regularization parameter $\lambda = 0.1$.
+The architecture of the target model is as follows: the RNN consists of two recurrent layers, each with a hidden dimension of 32. It takes one-hot encoded sequences as input and uses the final hidden state for classification via a linear layer.
+
+The experimental parameters are as follows: 2 classes, 20 samples per class. Each sample is a 4‑letter sequence from the alphabet {A, B, C, D, E}, with each letter encoded as a one‑hot vector. The inner loop has 10 steps, with learning rates of 0.5 and 0.005 for the inner and outer loops, respectively. We use cross-entropy as the meta-loss function. For regularization, we use a combination of the average intra-class distance and a positional diversity term that maximizes the entropy of symbol distributions at each position within a class, encouraging diversity at each sequence step:
+\[
+\mathcal{R} = \alpha \cdot \mathcal{R}_{\text{dist}} + \beta \cdot \mathcal{R}_{\text{pos}},
+\]
+\[
+\mathcal{R}_{\text{pos}} = \frac{1}{C} \sum_{c=1}^{C} \frac{1}{L} \sum_{l=1}^{L} \left(1 - \frac{H_{c,l}}{\log V}\right), \qquad
+H_{c,l} = -\sum_{v=1}^{V} p_{c,l,v} \log p_{c,l,v},
+\]
+where $C$ is the number of classes, $L$ is the sequence length, $V$ is the vocabulary size, and $p_{c,l,v}$ is the empirical probability of symbol $v$ at position $l$ in class $c$.
+
+In our experiment, the regularization parameters are $\lambda = 1$, $\alpha = 0.2$, $\beta = 0.8$.
+
+The obtained dataset is presented in Figure~\ref{fig:rnn_dataset}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/RNN/accuracy.png}
-    \caption{Accuracy dependence on meta-iteration}
-    \label{fig:rnn_accuracy}
-\end{figure}
-
-Below are five example sequences from each class:
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\textwidth]{figures/RNN/dataset_examples.png}
-    \caption{Examples of the obtained dataset}
+    \includegraphics[width=0.6\textwidth]{figures/RNN/dataset.png}
+    \caption{Obtained dataset}
     \label{fig:rnn_dataset}
 \end{figure}
 
-We now verify the sequential structure of the obtained dataset. To this end, we train the model on the original dataset and then validate it on the reversed test set. Averaging over different splits of the dataset into training and test sets yields the following results:
+To verify the sequential structure of the obtained dataset, we perform the following experiment. We train the model on three different training sets: original, reversed, and randomly permuted sequences. Each trained model is then evaluated on all three test sets (original, reversed, and permuted). The results are averaged over multiple random train-test splits and presented in Table~\ref{tab:rnn_experiment}.
 
 \begin{table}[h!]
 \centering
-\begin{tabular}{l c}
-\hline
-\textbf{Data type} & \textbf{Accuracy (\%)} \\
-\hline
-Original           & $100.00 \pm 0.00$ \\
-Reversed           & $32.40 \pm 14.08$ \\
-\hline
-\end{tabular}
+\caption{Accuracy on original, reversed and permuted test sets}
+\label{tab:rnn_experiment}
+    \begin{tabular}{l c c c}
+    \hline
+    \textbf{Train data} & \textbf{Test: Original} & \textbf{Test: Reversed} & \textbf{Test: Permuted} \\
+    \hline
+    Original & $100.00 \pm 0.00$ & $0.00 \pm 0.00$ & $50.12 \pm 17.01$ \\
+    Reversed & $0.05 \pm 0.79$ & $99.80 \pm 3.57$ & $49.39 \pm 17.25$ \\
+    Permuted & $38.88 \pm 22.07$ & $37.27 \pm 19.59$ & $38.42 \pm 14.98$ \\
+    \hline
+    \end{tabular}
 \end{table}
+As can be observed, the accuracy on reversed sequences is about 0 \%, which indicates that the model assigns them to exactly the opposite class. For randomly permuted sequences, the accuracy is about 50 \%, which is consistent with random assignment to classes.
 
-We also perform a similar experiment, this time training on the reversed dataset and validating on the original one. The results are shown below:
+These results confirm the importance of order for objects in the obtained dataset, from which we conclude that the data has a sequential structure. This aligns with the well-known inductive bias of RNNs.
 
-\begin{table}[h!]
-\centering
-\begin{tabular}{l c}
-\hline
-\textbf{Data type} & \textbf{Accuracy (\%)} \\
-\hline
-Reversed (train)   & $42.20 \pm 27.91$ \\
-Original (test)    & $29.10 \pm 17.33$ \\
-\hline
-\end{tabular}
-\end{table}
-
-As can be observed, in both cases, generalization performance drops significantly, indicating that the order of letters plays a crucial role. This confirms the sequential structure of the data. Notably, this aligns with the well-known inductive bias of RNNs, demonstrating that our method works correctly.
-
+Thus, our method demonstrates strong performance on RNNs.
 
 \section{Discussion}\label{sec:disc}
 
+Our experiments with CNNs and RNNs demonstrate that the proposed method successfully extracts the well-known inductive biases of these architectures.
+
+To evaluate the locality of the generated datasets in the CNN experiment, we compute the ratio of accuracy on the shuffled test set (where $2 \times 2$ blocks are randomly permuted) to accuracy on the original test set. For all configurations of the meta-loss, the value of this metric is $1.0$ (see Table~\ref{tab:test_locality_results}), confirming the locality of the generated data. Moreover, a comparison with an MLP, which lacks an explicit inductive bias, further supports this conclusion. The MLP achieves notably lower accuracy, indicating that local structure dominates over the global one in the obtained datasets.
+
+To assess translation invariance, we compute the ratio of accuracy on the shifted test set to accuracy on the original test set. For a horizontal shift by one pixel, this ratio is approximately $0.96$; for a vertical shift by one pixel, it is also approximately $0.96$; and for a shift in both directions, it is approximately $0.90$ (see Table~\ref{tab:shift_experiment}). All values are close to $1$, and the slight deviations can be attributed to the information lost due to padding the missing pixels with zeros. These results confirm the translation invariance of the obtained dataset.
+
+To evaluate the sequential structure of the data generated for RNNs, we test the model's accuracy on reversed and randomly permuted sequences. As shown in Table~\ref{tab:rnn_experiment}, for the model trained on original sequences, the accuracy drops from $100\%$ on the original test set to $0\%$ on the reversed test set, indicating that the model assigns the sequence to exactly the opposite class and highlighting the critical role of order. For the model trained on reversed sequences, the result is symmetric. In contrast, for randomly permuted sequences, the accuracy is approximately $50\%$, which aligns with the random baseline for binary classification. These results confirm that the generated data possess a strong sequential structure, consistent with the well-known inductive bias of RNNs.
+
+However, despite the advantages of our method, it does not fully solve the problem of finding the correspondence between models and their inductive biases, since the resulting datasets do not always explicitly reveal the inductive bias and require additional analysis, such as that which we performed for CNNs and RNNs, to interpret the results.
 
 \section{Conclusion}\label{sec:concl}
 
+We propose a generative meta-learning framework for extracting the inductive bias of differentiable learning algorithms without prior knowledge of the input data distribution. Unlike prior work~\cite{dorrell2023metalearninginductivebiasessimple} that generates only labels for samples from a fixed distribution, our approach produces entire synthetic datasets via a meta-learned generative model. The resulting datasets are easy for the target model to generalize from and reflect its inductive bias.
 
+We empirically validate our method in experiments with CNNs and RNNs and extract the well-known inductive biases of these architectures: locality and translation invariance for CNNs, and sequential structure for RNNs.
+
+Thus, our method successfully extracts inductive bias, offering a tool for analyzing different model architectures.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
