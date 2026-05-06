@@ -6,6 +6,7 @@ def smooth(data, window):
         return data
     return np.convolve(data, np.ones(window)/window, mode='valid')
 
+# Function for visualizing and comparing different meta-losses
 def plot_accuracy_comparison(*acc_lists, 
                             labels=None, 
                             title="Accuracy Comparison",

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# Функции потерь для мета-обучения
+# Loss functions for meta-learning
 def meta_loss_mse(logits, targets):
     """
     MSE
@@ -17,8 +17,11 @@ def meta_loss_cross_entropy(logits, targets):
     """
     return F.cross_entropy(logits, targets)
 
-# Регуляризации
-def regularizer_class_diversity(generator, x, y, reg_lambda=0.05):
+# Regularization
+def regularizer_class_dist(generator, x, y, reg_lambda=0.05):
+    """
+    Average intra-class distance
+    """
     num_classes = len(torch.unique(y))
     x_flat = x.view(x.size(0), -1)
     dim = x_flat.shape[1]
@@ -52,6 +55,9 @@ def regularizer_class_diversity(generator, x, y, reg_lambda=0.05):
     return -reg_lambda * diversity
 
 def regularizer_svd(generator, x, y, reg_lambda=1, threshold=1):
+    """
+    Penalties for singular values below the threshold
+    """
     reg_loss = 0.0
     count = 0
 
@@ -79,19 +85,5 @@ def regularizer_svd(generator, x, y, reg_lambda=1, threshold=1):
     
     if count > 0:
         reg_loss /= count
-    
-    return reg_lambda * reg_loss
-
-def regularizer_svd_for_x(generator, x, y, reg_lambda=1, threshold=1):
-    x_flat = x.view(x.size(0), -1)
-    reg_loss = 0.0
-    
-    try:
-        U, S, V = torch.svd(x_flat)
-        small = torch.clamp(threshold - S, min=0)
-        reg_loss = torch.sum(small ** 2) / len(S)
-        
-    except:
-        pass
     
     return reg_lambda * reg_loss

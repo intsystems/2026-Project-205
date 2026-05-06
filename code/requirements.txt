@@ -1,0 +1,6 @@
+numpy
+torch
+torchvision
+matplotlib
+geomloss
+learn2learn

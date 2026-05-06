@@ -61,7 +61,7 @@ class MetaLearner:
             if hasattr(layer, 'reset_parameters'):
                 layer.reset_parameters()
     
-    # Функция для генерации датасета
+    # Function for generating a dataset
     def generate_dataset(self):
         total = self.n_per_class * self.num_classes
         y = torch.arange(self.num_classes).repeat_interleave(self.n_per_class)
@@ -70,9 +70,9 @@ class MetaLearner:
         x = self.generator(z, y)
         return x, y
     
-    # Шаг мета-обучения
+    # Meta-learning step
     def meta_step(self):
-        # Генерируем датасет и разбиваем на train и test
+        # Generate dataset and split into train and test
         x, y = self.generate_dataset()
         
         total = x.shape[0]
@@ -87,17 +87,17 @@ class MetaLearner:
         x_test = x[test_idx]
         y_test = y[test_idx]
         
-        # Клонируем модель для внутреннего цикла
+        # Clone the model for the inner loop
         self.reset_model(self.base_learner)
         learner = self.maml.clone()
         
-        # Обучение целевой модели
+        # Train the target model
         for step in range(self.inner_steps):
             logits = learner(x_train)
             loss = F.cross_entropy(logits, y_train)
             learner.adapt(loss)
         
-        # Считаем мета-лосс
+        # Compute meta-loss
         logits_test = learner(x_test)
         meta_loss_value = self.meta_loss_fn(logits_test, y_test)
         
@@ -105,12 +105,12 @@ class MetaLearner:
         
         meta_loss = meta_loss_value + reg_term
         
-        # Обновляем параметры
+        # Update parameters
         self.meta_optimizer.zero_grad()
         meta_loss.backward()
         self.meta_optimizer.step()
         
-        # Считаем accuracy для визуализации
+        # Compute accuracy for visualization
         with torch.no_grad():
             predictions = logits_test.argmax(dim=1)
             correct = (predictions == y_test).sum().item()
@@ -120,7 +120,7 @@ class MetaLearner:
         
         return meta_loss.item(), accuracy
     
-    # Функция мета-обучения
+    # Meta-learning function
     def train(self, steps, visualize_every=100):
         consecutive_100_count = 0
         
@@ -133,12 +133,10 @@ class MetaLearner:
             else:
                 consecutive_100_count = 0
             
-            # Визуализация
             if visualize_every != 0 and step % visualize_every == 0 and step != 0:
                 print(f"step: {step}, meta_loss: {loss:.4f}, accuracy: {self.accuracy[-1]:.2f}%")
                 self.visualize_dataset()
             
-            # Проверяем условие остановки
             if self.stop_after_consecutive_100 > 0 and consecutive_100_count >= self.stop_after_consecutive_100:
                 break
 
@@ -146,7 +144,7 @@ class MetaLearner:
         self.visualize_dataset()
     
 
-    # Функции для визуализации
+    # Functions for visualization
     def visualize_dataset(self):
         self.generator.eval()
         with torch.no_grad():
