@@ -371,50 +371,56 @@ Thus, our method demonstrates strong performance on CNNs.
 \subsection{RNNs}
 Now we conduct an experiment with RNNs.
 
-The architecture of the target model is as follows: the RNN consists of two recurrent layers, each with a hidden dimension of 32. It takes one-hot encoded sequences as input and uses the final hidden state for classification via a linear layer.
+The architecture of the target model is as follows: the RNN consists of a single recurrent layer with a hidden dimension of 16. It takes sequences of real-valued numbers as input and produces a prediction for each time step via a linear layer applied to the hidden states.
 
-The experimental parameters are as follows: 2 classes, 20 samples per class. Each sample is a 4‑letter sequence from the alphabet {A, B, C, D, E}, with each letter encoded as a one‑hot vector. The inner loop has 10 steps, with learning rates of 0.5 and 0.005 for the inner and outer loops, respectively. We use cross-entropy as the meta-loss function. For regularization, we use a combination of the average intra-class distance and a positional diversity term that maximizes the entropy of symbol distributions at each position within a class, encouraging diversity at each sequence step:
+The experimental parameters are as follows: a sequence of 5000 elements, each of which is a real number. The inner loop has 5 steps, with learning rates of 0.1 and 0.01 for the inner and outer loops, respectively. 
+In this experiment, we avoid the trivial case of a constant sequence by simultaneously training two models in the inner loop: the target RNN and an MLP. The meta-loss is defined as:
 \[
-\mathcal{R} = \alpha \cdot \mathcal{R}_{\text{dist}} + \beta \cdot \mathcal{R}_{\text{pos}},
+\mathcal{L} = \text{MSE}_{\text{RNN}} - \alpha \ln(\text{MSE}_{\text{MLP}}) + \lambda \mathcal{R}_{L1},
 \]
-\[
-\mathcal{R}_{\text{pos}} = \frac{1}{C} \sum_{c=1}^{C} \frac{1}{L} \sum_{l=1}^{L} \left(1 - \frac{H_{c,l}}{\log V}\right), \qquad
-H_{c,l} = -\sum_{v=1}^{V} p_{c,l,v} \log p_{c,l,v},
-\]
-where $C$ is the number of classes, $L$ is the sequence length, $V$ is the vocabulary size, and $p_{c,l,v}$ is the empirical probability of symbol $v$ at position $l$ in class $c$.
+where \(\text{MSE}_{\text{RNN}}\) and \(\text{MSE}_{\text{MLP}}\) are the mean squared errors of the RNN and MLP, respectively, and \(\mathcal{R}_{L1}\) is the L1 regularization term. In our experiment, \(\alpha = 1\) and \(\lambda = 1 \times 10^{-5}\).
 
-In our experiment, the regularization parameters are $\lambda = 1$, $\alpha = 0.2$, $\beta = 0.8$.
+Unlike the CNN experiment, the task is formulated as next-element prediction. At each meta-training step, a dataset is constructed from the original sequence using a sliding window, where each example consists of a context of length 10 and the target value corresponding to the element immediately following the context.
 
-The obtained dataset is presented in Figure~\ref{fig:rnn_dataset}.
+As a result of meta-training, we obtained a sequence for which the RNN achieves an MSE of $1.13 \pm 0.04$, while the MLP yields an MSE of $(4.9 \pm 150) \cdot 10^{27}$. Figure \ref{fig:rnn_sequense} shows an example of RNN predictions on the test set.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{figures/RNN/dataset.png}
-    \caption{Obtained dataset}
-    \label{fig:rnn_dataset}
+    \includegraphics[width=1\textwidth]{figures/RNN/rnn_prediction_on_test.png}
+    \caption{Comparison of the obtained test set and RNN predictions.}
+    \label{fig:rnn_sequense}
 \end{figure}
 
-To verify the sequential structure of the obtained dataset, we perform the following experiment. We train the model on three different training sets: original, reversed, and randomly permuted sequences. Each trained model is then evaluated on all three test sets (original, reversed, and permuted). The results are averaged over multiple random train-test splits and presented in Table~\ref{tab:rnn_experiment}.
+To verify the sequential structure of the obtained dataset, we perform the following experiment. First, we train the model on the original training and than evaluate it on two different test set: original and randomly permuted (within each context, the 10 numbers are randomly permuted) test set. Then we train and test model on randomly permuted data. The results are averaged over multiple random model initializations and presented in Table~\ref{tab:rnn_experiment}.
 
 \begin{table}[h!]
-\centering
-\caption{Accuracy on original, reversed and permuted test sets}
-\label{tab:rnn_experiment}
-    \begin{tabular}{l c c c}
-    \hline
-    \textbf{Train data} & \textbf{Test: Original} & \textbf{Test: Reversed} & \textbf{Test: Permuted} \\
-    \hline
-    Original & $100.00 \pm 0.00$ & $0.00 \pm 0.00$ & $50.12 \pm 17.01$ \\
-    Reversed & $0.05 \pm 0.79$ & $99.80 \pm 3.57$ & $49.39 \pm 17.25$ \\
-    Permuted & $38.88 \pm 22.07$ & $37.27 \pm 19.59$ & $38.42 \pm 14.98$ \\
-    \hline
-    \end{tabular}
+    \centering
+    \caption{MSE comparison on original and shuffled data}
+    \label{tab:rnn_experiment}
+\begin{tabular}{l c c}
+\hline
+\textbf{Training} & \textbf{Test} & \textbf{MSE} \\
+\hline
+Original & Original & $1.13 \pm 0.04$ \\
+Original & Shuffled  & $7.21 \pm 0.26$ \\
+Shuffled  & Shuffled  & $5.973 \pm 0.004$ \\
+\hline
+\end{tabular}
 \end{table}
-As can be observed, the accuracy on reversed sequences is about 0 \%, which indicates that the model assigns them to exactly the opposite class. For randomly permuted sequences, the accuracy is about 50 \%, which is consistent with random assignment to classes.
+The substantial increase in MSE (from $1.13$ to $7.21$) when testing on randomly shuffled data demonstrates that the model heavily relies on the order of elements. This confirms that the generated sequence possesses a strong temporal structure.
 
-These results confirm the importance of order for objects in the obtained dataset, from which we conclude that the data has a sequential structure. This aligns with the well-known inductive bias of RNNs.
+We also examine the dependence of the squared error on the context length. To this end, for each context length, we randomly sample 1500 examples of this length from the test set and compute the corresponding squared prediction error of the RNN. The results, including the mean, median, and interquartile range, are shown in the Figure \ref{fig:rnn_mse_vs_context_length}. 
 
-Thus, our method demonstrates strong performance on RNNs.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figures/RNN/MSE_vs_Context_length.png}
+    \caption{Dependence of Squared Error on context length.}
+    \label{fig:rnn_mse_vs_context_length}
+\end{figure}
+
+The initial decrease in median squared error up to a context length of 3 indicates that the model benefits from additional preceding elements. The subsequent saturation suggests that the relevant dependencies in the sequence are short-range and that the RNN successfully captures them within a small window. This behavior is characteristic of sequential data with limited memory.
+
+These results collectively confirm that the meta-learned generator produces sequences with a strong sequential structure, which aligns with the inductive bias of RNNs.  Therefore, our method demonstrates strong performance on RNNs.
 
 \iffalse
 \section{Discussion}\label{sec:disc}
